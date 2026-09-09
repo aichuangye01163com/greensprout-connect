@@ -28,7 +28,7 @@ export const Route = createFileRoute("/profile")({
       { property: "og:description", content: "50 个兴趣标签、雷区设置与隐私开关。" },
     ],
   }),
-  component: ProfilePage;
+  component: ProfilePage,
 });
 
 function ProfilePage() {
