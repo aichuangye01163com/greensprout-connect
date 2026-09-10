@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -33,17 +34,25 @@ export function GSProvider({ children }: { children: ReactNode }) {
   const [joinedIds, setJoinedIds] = useState<string[]>([]);
   const [profile, setProfile] = useState<userService.UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const sessionVersionRef = useRef(0);
 
   const refresh = useCallback(async () => {
+    const sessionVersion = sessionVersionRef.current;
     const loggedOut = userService.isLoggedOut();
     const [e, j, p] = await Promise.all([
       activities.listActivities(),
       activities.listJoinedIds(),
       loggedOut ? Promise.resolve(null) : userService.getProfile(),
     ]);
+    if (sessionVersion !== sessionVersionRef.current) return;
     setEvents(e);
-    setJoinedIds(j);
-    setProfile(p);
+    if (userService.isLoggedOut()) {
+      setJoinedIds([]);
+      setProfile(null);
+    } else {
+      setJoinedIds(j);
+      setProfile(p);
+    }
     setLoading(false);
   }, []);
 
@@ -79,9 +88,11 @@ export function GSProvider({ children }: { children: ReactNode }) {
         setProfile(p);
       },
       logout: () => {
+        sessionVersionRef.current += 1;
         userService.logout();
         setProfile(null);
         setJoinedIds([]);
+        setLoading(false);
       },
       isNewUser: () => {
         // 判断是否为新用户：profile 为 null
