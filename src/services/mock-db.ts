@@ -145,13 +145,13 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me$/, () => db.profile);
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
-    db.profile = { ...(db.profile ?? DEFAULT_PROFILE), ...(req.body as object) };
+    db.profile = { ...requireProfile(), ...(req.body as object) };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
 
   registerMockRoute("POST", /^\/me\/email\/verify$/, () => {
-    db.profile = { ...(db.profile ?? DEFAULT_PROFILE), emailVerified: true };
+    db.profile = { ...requireProfile(), emailVerified: true };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
