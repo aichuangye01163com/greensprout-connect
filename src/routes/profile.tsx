@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, LogOut } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
 import { Chip } from "@/components/gs/Chip";
-import { EventCard } from "@/components/gs/EventCard";
 import { useGS } from "@/lib/gs-store";
 import {
   AVATAR_CHOICES,
@@ -19,6 +18,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/profile")({
   head: () => ({
@@ -33,11 +40,12 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, saveProfile, refresh, events, isJoined } = useGS();
+  const { profile, saveProfile, refresh, events, isJoined, logout } = useGS();
   const [draft, setDraft] = useState<UserProfile | null>(profile);
   const [customTag, setCustomTag] = useState("");
   const [code, setCode] = useState("");
   const [codeSent, setCodeSent] = useState(false);
+  const [logoutConfirm, setLogoutConfirm] = useState(false);
 
   useEffect(() => {
     if (profile) setDraft(profile);
@@ -103,10 +111,14 @@ function ProfilePage() {
     toast.success("资料已保存");
   };
 
+  const onLogout = () => {
+    logout();
+  };
+
   return (
     <AppShell>
       <div className="space-y-4 pb-24">
-        <header className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
+        <header className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3">
           <span className="grid size-14 shrink-0 place-items-center rounded-full bg-accent text-2xl">
             {draft.avatar}
           </span>
@@ -116,6 +128,15 @@ function ProfilePage() {
               {draft.city} · {draft.career}
             </p>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            onClick={() => setLogoutConfirm(true)}
+            title="退出登录"
+          >
+            <LogOut className="size-5" />
+          </Button>
         </header>
 
         {/* 我的活动部分 */}
@@ -125,7 +146,7 @@ function ProfilePage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {hostedEvents.map((e) => (
-                <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
+                <ActivityCardMini key={e.id} event={e} />
               ))}
             </div>
           )}
@@ -137,7 +158,7 @@ function ProfilePage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {joinedEvents.map((e) => (
-                <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
+                <ActivityCardMini key={e.id} event={e} />
               ))}
             </div>
           )}
@@ -292,6 +313,25 @@ function ProfilePage() {
           保存资料
         </Button>
       </div>
+
+      <Dialog open={logoutConfirm} onOpenChange={setLogoutConfirm}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>确认退出登录？</DialogTitle>
+            <DialogDescription>
+              退出后将返回首页，下次访问需要重新注册。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setLogoutConfirm(false)}>
+              取消
+            </Button>
+            <Button variant="destructive" onClick={onLogout}>
+              确认退出
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 }
@@ -328,5 +368,23 @@ function Row({
       <span className="text-sm">{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} />
     </div>
+  );
+}
+
+function ActivityCardMini({ event }: { event: any }) {
+  import("@tanstack/react-router").then(({ Link }) => {
+    // 这会在运行时动态创建链接
+  });
+  
+  const { Link } = require("@tanstack/react-router");
+  return (
+    <Link
+      to="/event/$id"
+      params={{ id: event.id }}
+      className="block p-3 rounded-xl border border-border bg-secondary/50 hover:bg-secondary transition-colors text-sm"
+    >
+      <p className="font-medium truncate">{event.title}</p>
+      <p className="text-xs text-muted-foreground truncate">{event.location}</p>
+    </Link>
   );
 }
