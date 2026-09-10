@@ -386,7 +386,7 @@ function EventDetail() {
           </div>
           {ended ? (
             <Button disabled className="rounded-full px-8">
-              ���动已结束
+              活动已结束
             </Button>
           ) : joined ? (
             <Button
