@@ -39,14 +39,17 @@ export function GSProvider({ children }: { children: ReactNode }) {
     setEvents(e);
     setJoinedIds(j);
     setProfile(p);
-    setCreatedEvents(activities.pickCreatedEvents(e, p));
-    setJoinedEvents(activities.pickJoinedEvents(e, p));
     setLoading(false);
   }, []);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  useEffect(() => {
+    setCreatedEvents(activities.pickCreatedEvents(events, profile));
+    setJoinedEvents(activities.pickJoinedEvents(events, profile));
+  }, [events, profile]);
 
   const value = useMemo<Store>(
     () => ({
@@ -60,51 +63,45 @@ export function GSProvider({ children }: { children: ReactNode }) {
       isJoined: (id) => joinedIds.includes(id),
       join: async (id) => {
         const res = await activities.joinActivity(id);
-        const nextEvents = events.map((e) => (e.id === id ? res.event : e));
-        const nextProfile = profile
-          ? {
-              ...profile,
-              joinedEventIds: profile.joinedEventIds.includes(id)
-                ? profile.joinedEventIds
-                : [...profile.joinedEventIds, id],
-            }
-          : profile;
         setJoinedIds(res.joinedIds);
-        setEvents(nextEvents);
-        setProfile(nextProfile);
-        setCreatedEvents(activities.pickCreatedEvents(nextEvents, nextProfile));
-        setJoinedEvents(activities.pickJoinedEvents(nextEvents, nextProfile));
+        setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                joinedEventIds: prev.joinedEventIds.includes(id)
+                  ? prev.joinedEventIds
+                  : [...prev.joinedEventIds, id],
+              }
+            : prev,
+        );
       },
       cancel: async (id) => {
         const res = await activities.cancelActivity(id);
-        const nextEvents = events.map((e) => (e.id === id ? res.event : e));
-        const nextProfile = profile
-          ? {
-              ...profile,
-              joinedEventIds: profile.joinedEventIds.filter((eventId) => eventId !== id),
-            }
-          : profile;
         setJoinedIds(res.joinedIds);
-        setEvents(nextEvents);
-        setProfile(nextProfile);
-        setCreatedEvents(activities.pickCreatedEvents(nextEvents, nextProfile));
-        setJoinedEvents(activities.pickJoinedEvents(nextEvents, nextProfile));
+        setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                joinedEventIds: prev.joinedEventIds.filter((eventId) => eventId !== id),
+              }
+            : prev,
+        );
       },
       createEvent: async (input) => {
         const created = await activities.createActivity(input);
-        const nextEvents = [created, ...events];
-        const nextProfile = profile
-          ? {
-              ...profile,
-              createdEventIds: profile.createdEventIds.includes(created.id)
-                ? profile.createdEventIds
-                : [created.id, ...profile.createdEventIds],
-            }
-          : profile;
-        setEvents(nextEvents);
-        setProfile(nextProfile);
-        setCreatedEvents(activities.pickCreatedEvents(nextEvents, nextProfile));
-        setJoinedEvents(activities.pickJoinedEvents(nextEvents, nextProfile));
+        setEvents((prev) => [created, ...prev]);
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                createdEventIds: prev.createdEventIds.includes(created.id)
+                  ? prev.createdEventIds
+                  : [created.id, ...prev.createdEventIds],
+              }
+            : prev,
+        );
         return created;
       },
       saveProfile: async (patch) => {
@@ -117,6 +114,8 @@ export function GSProvider({ children }: { children: ReactNode }) {
         setJoinedIds([]);
         setCreatedEvents([]);
         setJoinedEvents([]);
+        setLoading(true);
+        void refresh();
       },
       isNewUser: () => {
         // 判断是否为新用户：profile 为 null
