@@ -51,6 +51,13 @@ function EventDetail() {
   const [draft, setDraft] = useState("");
   const chatRef = useRef<HTMLDivElement>(null);
 
+  // 当通过邀请链接进入私密活动室时，自动弹出密码输入框
+  useEffect(() => {
+    if (invite && event && event.isPrivate && !isJoined(event.id) && !askPassword && !confirmJoin) {
+      setAskPassword(true);
+    }
+  }, [invite, event, isJoined, askPassword, confirmJoin]);
+
   useEffect(() => {
     if (!event) return;
     void getChatRoom(event.id).then(setRoom);
