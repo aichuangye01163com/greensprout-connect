@@ -6,6 +6,15 @@ import type { DEFAULT_PROFILE } from "@/data/greensprout";
 ensureMockRoutes();
 
 export type UserProfile = typeof DEFAULT_PROFILE;
+export interface RegisterInput {
+  nickname: string;
+  email: string;
+  password: string;
+}
+export interface LoginInput {
+  email: string;
+  password: string;
+}
 
 const PROFILE_STORAGE_KEY = "gs_profile";
 const JOINED_IDS_STORAGE_KEY = "gs_joined_ids";
@@ -17,6 +26,14 @@ export async function getProfile(): Promise<UserProfile | null> {
 
 export async function updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
   return api.patch<UserProfile>("/me", patch);
+}
+
+export async function registerAccount(input: RegisterInput): Promise<UserProfile> {
+  return api.post<UserProfile>("/auth/register", input);
+}
+
+export async function loginAccount(input: LoginInput): Promise<UserProfile> {
+  return api.post<UserProfile>("/auth/login", input);
 }
 
 /** 邮箱验证（原型为模拟流程） */
@@ -41,6 +58,7 @@ export function clearProfile() {
 
 /** 退出登录并清理本地会话 */
 export function logout() {
+  void api.post("/auth/logout").catch(() => undefined);
   clearProfile();
   try {
     localStorage.removeItem(JOINED_IDS_STORAGE_KEY);

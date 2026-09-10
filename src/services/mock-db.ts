@@ -9,6 +9,15 @@ import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 const STORAGE_KEY_EVENTS = "gs_events";
 const STORAGE_KEY_PROFILE = "gs_profile";
 const STORAGE_KEY_JOINED = "gs_joined_ids";
+const STORAGE_KEY_ACCOUNTS = "gs_accounts";
+const STORAGE_KEY_CURRENT_ACCOUNT = "gs_current_account_email";
+
+type MockAccount = {
+  email: string;
+  password: string;
+  profile: typeof DEFAULT_PROFILE;
+  joinedIds: string[];
+};
 
 // 初始化数据：从 localStorage 读取，如果不存在则使用默认值
 function initEvents(): GSEvent[] {
@@ -41,10 +50,32 @@ function initJoinedIds(): string[] {
   return [];
 }
 
+function initAccounts(): MockAccount[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+    if (stored) return JSON.parse(stored);
+  } catch (e) {
+    console.warn("Failed to load accounts from localStorage", e);
+  }
+  return [];
+}
+
+function initCurrentAccountEmail(): string | null {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_CURRENT_ACCOUNT);
+    if (stored) return stored;
+  } catch (e) {
+    console.warn("Failed to load current account from localStorage", e);
+  }
+  return null;
+}
+
 const db = {
   events: initEvents() as GSEvent[],
   profile: initProfile(),
   joinedIds: initJoinedIds() as string[],
+  accounts: initAccounts() as MockAccount[],
+  currentAccountEmail: initCurrentAccountEmail(),
 };
 
 // 持久化到 localStorage 的辅助函数
@@ -72,6 +103,36 @@ function saveJoinedIds() {
   }
 }
 
+function saveAccounts() {
+  try {
+    localStorage.setItem(STORAGE_KEY_ACCOUNTS, JSON.stringify(db.accounts));
+  } catch (e) {
+    console.warn("Failed to save accounts to localStorage", e);
+  }
+}
+
+function saveCurrentAccountEmail() {
+  try {
+    if (db.currentAccountEmail) {
+      localStorage.setItem(STORAGE_KEY_CURRENT_ACCOUNT, db.currentAccountEmail);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_CURRENT_ACCOUNT);
+    }
+  } catch (e) {
+    console.warn("Failed to save current account to localStorage", e);
+  }
+}
+
+function syncCurrentAccount() {
+  if (!db.currentAccountEmail || !db.profile) return;
+  db.accounts = db.accounts.map((account) =>
+    account.email === db.currentAccountEmail
+      ? { ...account, profile: db.profile, joinedIds: db.joinedIds }
+      : account,
+  );
+  saveAccounts();
+}
+
 function idFrom(path: string, prefix: string) {
   return path.replace(prefix, "").split("/")[0] ?? "";
 }
@@ -86,6 +147,34 @@ let registered = false;
 export function ensureMockRoutes() {
   if (registered) return;
   registered = true;
+
+  if (!db.currentAccountEmail && db.profile?.email) {
+    db.currentAccountEmail = db.profile.email;
+    const hasLegacyAccount = db.accounts.some((account) => account.email === db.currentAccountEmail);
+    if (!hasLegacyAccount) {
+      db.accounts = [
+        ...db.accounts,
+        {
+          email: db.currentAccountEmail,
+          password: "123456",
+          profile: db.profile,
+          joinedIds: db.joinedIds,
+        },
+      ];
+      saveAccounts();
+    }
+    saveCurrentAccountEmail();
+  }
+
+  if (db.currentAccountEmail) {
+    const active = db.accounts.find((account) => account.email === db.currentAccountEmail);
+    if (active) {
+      db.profile = active.profile;
+      db.joinedIds = active.joinedIds ?? [];
+      saveProfile();
+      saveJoinedIds();
+    }
+  }
 
   registerMockRoute("GET", /^\/activities$/, () => db.events);
 
@@ -119,6 +208,7 @@ export function ensureMockRoutes() {
     saveEvents(); // 💾 持久化
     if (!db.joinedIds.includes(id)) db.joinedIds = [...db.joinedIds, id];
     saveJoinedIds(); // 💾 持久化
+    syncCurrentAccount();
     return { joinedIds: db.joinedIds, event: db.events.find((e) => e.id === id) };
   });
 
@@ -137,7 +227,63 @@ export function ensureMockRoutes() {
     saveEvents(); // 💾 持久化
     db.joinedIds = db.joinedIds.filter((x) => x !== id);
     saveJoinedIds(); // 💾 持久化
+    syncCurrentAccount();
     return { joinedIds: db.joinedIds, event: db.events.find((e) => e.id === id) };
+  });
+
+  registerMockRoute("POST", /^\/auth\/register$/, (req) => {
+    const body = (req.body ?? {}) as { email?: string; password?: string; nickname?: string };
+    const email = body.email?.trim().toLowerCase() ?? "";
+    const password = body.password?.trim() ?? "";
+    const nickname = body.nickname?.trim() ?? "";
+    if (!email || !password || !nickname) throw new ApiError(400, "请填写昵称、邮箱和密码");
+    if (db.accounts.some((account) => account.email === email)) {
+      throw new ApiError(409, "该邮箱已注册，请直接登录");
+    }
+
+    const profile = {
+      ...DEFAULT_PROFILE,
+      nickname,
+      email,
+      emailVerified: false,
+    };
+    const account: MockAccount = { email, password, profile, joinedIds: [] };
+    db.accounts = [account, ...db.accounts];
+    db.currentAccountEmail = email;
+    db.profile = profile;
+    db.joinedIds = [];
+    saveAccounts();
+    saveCurrentAccountEmail();
+    saveProfile();
+    saveJoinedIds();
+    return profile;
+  });
+
+  registerMockRoute("POST", /^\/auth\/login$/, (req) => {
+    const body = (req.body ?? {}) as { email?: string; password?: string };
+    const email = body.email?.trim().toLowerCase() ?? "";
+    const password = body.password?.trim() ?? "";
+    const account = db.accounts.find((item) => item.email === email);
+    if (!account || account.password !== password) {
+      throw new ApiError(401, "邮箱或密码错误");
+    }
+    db.currentAccountEmail = account.email;
+    db.profile = account.profile;
+    db.joinedIds = account.joinedIds ?? [];
+    saveCurrentAccountEmail();
+    saveProfile();
+    saveJoinedIds();
+    return db.profile;
+  });
+
+  registerMockRoute("POST", /^\/auth\/logout$/, () => {
+    db.profile = null;
+    db.joinedIds = [];
+    db.currentAccountEmail = null;
+    saveProfile();
+    saveJoinedIds();
+    saveCurrentAccountEmail();
+    return { ok: true };
   });
 
   registerMockRoute("GET", /^\/me\/joined$/, () => db.joinedIds);
@@ -147,12 +293,14 @@ export function ensureMockRoutes() {
   registerMockRoute("PATCH", /^\/me$/, (req) => {
     db.profile = { ...requireProfile(), ...(req.body as object) };
     saveProfile(); // 💾 持久化
+    syncCurrentAccount();
     return db.profile;
   });
 
   registerMockRoute("POST", /^\/me\/email\/verify$/, () => {
     db.profile = { ...requireProfile(), emailVerified: true };
     saveProfile(); // 💾 持久化
+    syncCurrentAccount();
     return db.profile;
   });
 

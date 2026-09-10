@@ -22,6 +22,8 @@ interface Store {
   isJoined: (id: string) => boolean;
   createEvent: (input: activities.CreateActivityInput) => Promise<GSEvent>;
   saveProfile: (patch: Partial<userService.UserProfile>) => Promise<void>;
+  register: (input: userService.RegisterInput) => Promise<void>;
+  login: (input: userService.LoginInput) => Promise<void>;
   logout: () => void;
   isNewUser: () => boolean;
 }
@@ -76,6 +78,14 @@ export function GSProvider({ children }: { children: ReactNode }) {
       saveProfile: async (patch) => {
         const p = await userService.updateProfile(patch);
         setProfile(p);
+      },
+      register: async (input) => {
+        await userService.registerAccount(input);
+        await refresh();
+      },
+      login: async (input) => {
+        await userService.loginAccount(input);
+        await refresh();
       },
       logout: () => {
         userService.logout();
