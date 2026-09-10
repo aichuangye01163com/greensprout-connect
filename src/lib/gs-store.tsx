@@ -114,8 +114,6 @@ export function GSProvider({ children }: { children: ReactNode }) {
         setJoinedIds([]);
         setCreatedEvents([]);
         setJoinedEvents([]);
-        setLoading(true);
-        void refresh();
       },
       isNewUser: () => {
         // 判断是否为新用户：profile 为 null
