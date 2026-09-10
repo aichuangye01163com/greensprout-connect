@@ -123,11 +123,19 @@ function saveCurrentAccountEmail() {
   }
 }
 
+function cloneProfile(profile: typeof DEFAULT_PROFILE) {
+  return { ...profile, hobbies: [...profile.hobbies] };
+}
+
 function syncCurrentAccount() {
   if (!db.currentAccountEmail || !db.profile) return;
   db.accounts = db.accounts.map((account) =>
     account.email === db.currentAccountEmail
-      ? { ...account, profile: db.profile, joinedIds: db.joinedIds }
+      ? {
+          ...account,
+          profile: cloneProfile(db.profile),
+          joinedIds: [...db.joinedIds],
+        }
       : account,
   );
   saveAccounts();
@@ -159,8 +167,8 @@ export function ensureMockRoutes() {
         {
           email: db.currentAccountEmail,
           password: null,
-          profile: db.profile,
-          joinedIds: db.joinedIds,
+          profile: cloneProfile(db.profile),
+          joinedIds: [...db.joinedIds],
         },
       ];
       saveAccounts();
@@ -171,8 +179,8 @@ export function ensureMockRoutes() {
   if (db.currentAccountEmail) {
     const active = db.accounts.find((account) => account.email === db.currentAccountEmail);
     if (active) {
-      db.profile = active.profile;
-      db.joinedIds = active.joinedIds ?? [];
+      db.profile = cloneProfile(active.profile);
+      db.joinedIds = [...(active.joinedIds ?? [])];
       saveProfile();
       saveJoinedIds();
     }
@@ -249,11 +257,12 @@ export function ensureMockRoutes() {
       nickname,
       email,
       emailVerified: false,
+      hobbies: [...DEFAULT_PROFILE.hobbies],
     };
     const account: MockAccount = { email, password, profile, joinedIds: [] };
     db.accounts = [account, ...db.accounts];
     db.currentAccountEmail = email;
-    db.profile = profile;
+    db.profile = cloneProfile(profile);
     db.joinedIds = [];
     saveAccounts();
     saveCurrentAccountEmail();
@@ -277,8 +286,8 @@ export function ensureMockRoutes() {
       throw new ApiError(401, "邮箱或密码错误");
     }
     db.currentAccountEmail = account.email;
-    db.profile = account.profile;
-    db.joinedIds = account.joinedIds ?? [];
+    db.profile = cloneProfile(account.profile);
+    db.joinedIds = [...(account.joinedIds ?? [])];
     saveCurrentAccountEmail();
     saveProfile();
     saveJoinedIds();
