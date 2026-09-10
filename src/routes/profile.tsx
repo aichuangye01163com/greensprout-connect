@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, LogOut } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
 import { Chip } from "@/components/gs/Chip";
+import { EventCard } from "@/components/gs/EventCard";
 import { useGS } from "@/lib/gs-store";
 import {
   AVATAR_CHOICES,
@@ -146,7 +147,7 @@ function ProfilePage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {hostedEvents.map((e) => (
-                <ActivityCardMini key={e.id} event={e} />
+                <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
               ))}
             </div>
           )}
@@ -158,7 +159,7 @@ function ProfilePage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {joinedEvents.map((e) => (
-                <ActivityCardMini key={e.id} event={e} />
+                <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
               ))}
             </div>
           )}
@@ -368,23 +369,5 @@ function Row({
       <span className="text-sm">{label}</span>
       <Switch checked={checked} onCheckedChange={onChange} />
     </div>
-  );
-}
-
-function ActivityCardMini({ event }: { event: any }) {
-  import("@tanstack/react-router").then(({ Link }) => {
-    // 这会在运行时动态创建链接
-  });
-  
-  const { Link } = require("@tanstack/react-router");
-  return (
-    <Link
-      to="/event/$id"
-      params={{ id: event.id }}
-      className="block p-3 rounded-xl border border-border bg-secondary/50 hover:bg-secondary transition-colors text-sm"
-    >
-      <p className="font-medium truncate">{event.title}</p>
-      <p className="text-xs text-muted-foreground truncate">{event.location}</p>
-    </Link>
   );
 }
