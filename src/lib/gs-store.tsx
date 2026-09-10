@@ -79,7 +79,6 @@ export function GSProvider({ children }: { children: ReactNode }) {
       },
       logout: () => {
         userService.clearProfile();
-        setEvents([]);
         setProfile(null);
         setJoinedIds([]);
       },
