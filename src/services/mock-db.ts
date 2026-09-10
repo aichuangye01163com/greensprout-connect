@@ -56,6 +56,11 @@ const db = {
   joinedIds: initJoinedIds() as string[],
 };
 
+export function clearMockUserSession() {
+  db.profile = { ...DEFAULT_PROFILE };
+  db.joinedIds = [];
+}
+
 // 持久化到 localStorage 的辅助函数
 function saveEvents() {
   try {
@@ -147,12 +152,14 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me$/, () => (hasLoggedOutSession() ? null : db.profile));
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
+    if (hasLoggedOutSession()) throw new Error("未登录");
     db.profile = { ...db.profile, ...(req.body as object) };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
 
   registerMockRoute("POST", /^\/me\/email\/verify$/, () => {
+    if (hasLoggedOutSession()) throw new Error("未登录");
     db.profile = { ...db.profile, emailVerified: true };
     saveProfile(); // 💾 持久化
     return db.profile;

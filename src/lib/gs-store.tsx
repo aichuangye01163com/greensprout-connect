@@ -35,10 +35,11 @@ export function GSProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
+    const loggedOut = userService.isLoggedOut();
     const [e, j, p] = await Promise.all([
       activities.listActivities(),
       activities.listJoinedIds(),
-      userService.getProfile(),
+      loggedOut ? Promise.resolve(null) : userService.getProfile(),
     ]);
     setEvents(e);
     setJoinedIds(j);

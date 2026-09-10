@@ -1,6 +1,6 @@
 /** 用户领域服务 */
 import { api } from "./api-client";
-import { ensureMockRoutes } from "./mock-db";
+import { clearMockUserSession, ensureMockRoutes } from "./mock-db";
 import type { DEFAULT_PROFILE } from "@/data/greensprout";
 
 ensureMockRoutes();
@@ -11,8 +11,8 @@ const PROFILE_STORAGE_KEY = "gs_profile";
 const JOINED_IDS_STORAGE_KEY = "gs_joined_ids";
 const LOGOUT_SESSION_KEY = "gs_logged_out";
 
-export async function getProfile(): Promise<UserProfile | null> {
-  return api.get<UserProfile | null>("/me");
+export async function getProfile(): Promise<UserProfile> {
+  return api.get<UserProfile>("/me");
 }
 
 export async function updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
@@ -39,17 +39,39 @@ export function clearProfile() {
   }
 }
 
+export function isLoggedOut() {
+  try {
+    return sessionStorage.getItem(LOGOUT_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function clearSessionStorage() {
+  try {
+    const keys = Array.from({ length: sessionStorage.length }, (_, index) =>
+      sessionStorage.key(index),
+    )
+      .filter((key): key is string => key?.startsWith("gs_") === true)
+      .filter((key) => key !== LOGOUT_SESSION_KEY);
+    keys.forEach((key) => sessionStorage.removeItem(key));
+  } catch (e) {
+    console.warn("Failed to clear session storage", e);
+  }
+}
+
 export function logout() {
   clearProfile();
+  clearMockUserSession();
   try {
     localStorage.removeItem(JOINED_IDS_STORAGE_KEY);
   } catch (e) {
     console.warn("Failed to clear joined IDs from localStorage", e);
   }
+  clearSessionStorage();
   try {
-    sessionStorage.clear();
     sessionStorage.setItem(LOGOUT_SESSION_KEY, "1");
   } catch (e) {
-    console.warn("Failed to clear session storage", e);
+    console.warn("Failed to set logout session marker", e);
   }
 }
