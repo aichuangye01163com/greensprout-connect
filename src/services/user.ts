@@ -15,6 +15,16 @@ export interface LoginInput {
   email: string;
   password: string;
 }
+export type UserArchiveFieldValue = string | number | boolean | null;
+export interface UserArchive {
+  profile: UserProfile;
+  customFields: Record<string, UserArchiveFieldValue>;
+  updatedAt: string;
+}
+export interface UpdateUserArchiveInput {
+  set?: Record<string, UserArchiveFieldValue>;
+  remove?: string[];
+}
 
 const PROFILE_STORAGE_KEY = "gs_profile";
 const JOINED_IDS_STORAGE_KEY = "gs_joined_ids";
@@ -34,6 +44,14 @@ export async function registerAccount(input: RegisterInput): Promise<UserProfile
 
 export async function loginAccount(input: LoginInput): Promise<UserProfile> {
   return api.post<UserProfile>("/auth/login", input);
+}
+
+export async function getUserArchive(): Promise<UserArchive> {
+  return api.get<UserArchive>("/me/archive");
+}
+
+export async function updateUserArchive(input: UpdateUserArchiveInput): Promise<UserArchive> {
+  return api.patch<UserArchive>("/me/archive", input);
 }
 
 /** 邮箱验证（原型为模拟流程） */

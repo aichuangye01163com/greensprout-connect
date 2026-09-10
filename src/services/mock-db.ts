@@ -17,6 +17,14 @@ type MockAccount = {
   password: string | null;
   profile: typeof DEFAULT_PROFILE;
   joinedIds: string[];
+  archive: UserArchive;
+};
+
+type UserArchiveFieldValue = string | number | boolean | null;
+type UserArchive = {
+  profile: typeof DEFAULT_PROFILE;
+  customFields: Record<string, UserArchiveFieldValue>;
+  updatedAt: string;
 };
 
 // 初始化数据：从 localStorage 读取，如果不存在则使用默认值
@@ -53,7 +61,12 @@ function initJoinedIds(): string[] {
 function initAccounts(): MockAccount[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored) as unknown[];
+      return parsed
+        .map((raw) => normalizeAccount(raw))
+        .filter((account): account is MockAccount => account !== null);
+    }
   } catch (e) {
     console.warn("Failed to load accounts from localStorage", e);
   }
@@ -127,6 +140,55 @@ function cloneProfile(profile: typeof DEFAULT_PROFILE) {
   return { ...profile, hobbies: [...profile.hobbies] };
 }
 
+function cloneArchive(archive: UserArchive) {
+  return {
+    profile: cloneProfile(archive.profile),
+    customFields: { ...archive.customFields },
+    updatedAt: archive.updatedAt,
+  };
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function makeArchive(profile: typeof DEFAULT_PROFILE): UserArchive {
+  return {
+    profile: cloneProfile(profile),
+    customFields: {},
+    updatedAt: nowIso(),
+  };
+}
+
+function normalizeAccount(raw: unknown): MockAccount | null {
+  if (!raw || typeof raw !== "object") return null;
+  const source = raw as Partial<MockAccount> & { archive?: Partial<UserArchive> };
+  if (!source.email || typeof source.email !== "string") return null;
+  const fallbackProfile = cloneProfile(
+    (source.profile as typeof DEFAULT_PROFILE | undefined) ?? DEFAULT_PROFILE,
+  );
+  const archiveProfile = source.archive?.profile
+    ? cloneProfile(source.archive.profile as typeof DEFAULT_PROFILE)
+    : fallbackProfile;
+  return {
+    email: source.email,
+    password: typeof source.password === "string" ? source.password : null,
+    profile: fallbackProfile,
+    joinedIds: Array.isArray(source.joinedIds)
+      ? source.joinedIds.filter((id): id is string => typeof id === "string")
+      : [],
+    archive: {
+      profile: archiveProfile,
+      customFields:
+        source.archive?.customFields && typeof source.archive.customFields === "object"
+          ? { ...source.archive.customFields }
+          : {},
+      updatedAt:
+        typeof source.archive?.updatedAt === "string" ? source.archive.updatedAt : nowIso(),
+    },
+  };
+}
+
 function syncCurrentAccount() {
   if (!db.currentAccountEmail || !db.profile) return;
   db.accounts = db.accounts.map((account) =>
@@ -135,6 +197,11 @@ function syncCurrentAccount() {
           ...account,
           profile: cloneProfile(db.profile),
           joinedIds: [...db.joinedIds],
+          archive: {
+            ...cloneArchive(account.archive),
+            profile: cloneProfile(db.profile),
+            updatedAt: nowIso(),
+          },
         }
       : account,
   );
@@ -169,6 +236,7 @@ export function ensureMockRoutes() {
           password: null,
           profile: cloneProfile(db.profile),
           joinedIds: [...db.joinedIds],
+          archive: makeArchive(db.profile),
         },
       ];
       saveAccounts();
@@ -181,8 +249,10 @@ export function ensureMockRoutes() {
     if (active) {
       db.profile = cloneProfile(active.profile);
       db.joinedIds = [...(active.joinedIds ?? [])];
+      active.archive.profile = cloneProfile(db.profile);
       saveProfile();
       saveJoinedIds();
+      saveAccounts();
     }
   }
 
@@ -259,7 +329,13 @@ export function ensureMockRoutes() {
       emailVerified: false,
       hobbies: [...DEFAULT_PROFILE.hobbies],
     };
-    const account: MockAccount = { email, password, profile, joinedIds: [] };
+    const account: MockAccount = {
+      email,
+      password,
+      profile,
+      joinedIds: [],
+      archive: makeArchive(profile),
+    };
     db.accounts = [account, ...db.accounts];
     db.currentAccountEmail = email;
     db.profile = cloneProfile(profile);
@@ -288,9 +364,12 @@ export function ensureMockRoutes() {
     db.currentAccountEmail = account.email;
     db.profile = cloneProfile(account.profile);
     db.joinedIds = [...(account.joinedIds ?? [])];
+    account.archive.profile = cloneProfile(db.profile);
+    account.archive.updatedAt = nowIso();
     saveCurrentAccountEmail();
     saveProfile();
     saveJoinedIds();
+    saveAccounts();
     return db.profile;
   });
 
@@ -307,6 +386,47 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me\/joined$/, () => db.joinedIds);
 
   registerMockRoute("GET", /^\/me$/, () => db.profile);
+
+  registerMockRoute("GET", /^\/me\/archive$/, () => {
+    const currentProfile = requireProfile();
+    const account = db.accounts.find((item) => item.email === currentProfile.email);
+    if (!account) throw new ApiError(404, "未找到当前账户档案");
+    return cloneArchive(account.archive);
+  });
+
+  registerMockRoute("PATCH", /^\/me\/archive$/, (req) => {
+    const body = (req.body ?? {}) as {
+      set?: Record<string, UserArchiveFieldValue>;
+      remove?: string[];
+    };
+    const currentProfile = requireProfile();
+    const currentEmail = currentProfile.email;
+    const setFields = body.set ?? {};
+    const removeFields = body.remove ?? [];
+    const isValidFieldName = (name: string) => /^[a-zA-Z][\w-]{1,63}$/.test(name);
+    const isValidFieldValue = (value: unknown): value is UserArchiveFieldValue =>
+      ["string", "number", "boolean"].includes(typeof value) || value === null;
+    db.accounts = db.accounts.map((account) => {
+      if (account.email !== currentEmail) return account;
+      const nextArchive = cloneArchive(account.archive);
+      Object.entries(setFields).forEach(([key, value]) => {
+        if (!isValidFieldName(key)) throw new ApiError(400, `非法字段名: ${key}`);
+        if (!isValidFieldValue(value)) throw new ApiError(400, `字段值类型不支持: ${key}`);
+        nextArchive.customFields[key] = value;
+      });
+      removeFields.forEach((key) => {
+        if (!isValidFieldName(key)) throw new ApiError(400, `非法字段名: ${key}`);
+        delete nextArchive.customFields[key];
+      });
+      nextArchive.profile = cloneProfile(currentProfile);
+      nextArchive.updatedAt = nowIso();
+      return { ...account, archive: nextArchive };
+    });
+    saveAccounts();
+    const account = db.accounts.find((item) => item.email === currentEmail);
+    if (!account) throw new ApiError(404, "未找到当前账户档案");
+    return cloneArchive(account.archive);
+  });
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
     db.profile = { ...requireProfile(), ...(req.body as object) };
