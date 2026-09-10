@@ -140,13 +140,15 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me$/, () => db.profile);
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
-    db.profile = { ...(db.profile ?? DEFAULT_PROFILE), ...(req.body as object) };
+    if (!db.profile) throw new Error("请先注册后再保存资料");
+    db.profile = { ...db.profile, ...(req.body as object) };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
 
   registerMockRoute("POST", /^\/me\/email\/verify$/, () => {
-    db.profile = { ...(db.profile ?? DEFAULT_PROFILE), emailVerified: true };
+    if (!db.profile) throw new Error("请先注册后再进行邮箱验证");
+    db.profile = { ...db.profile, emailVerified: true };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
