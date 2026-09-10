@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck, LogOut } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
@@ -41,6 +41,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
+  const router = useRouter();
   const { profile, saveProfile, refresh, events, isJoined, logout } = useGS();
   const [draft, setDraft] = useState<UserProfile | null>(profile);
   const [customTag, setCustomTag] = useState("");
@@ -55,16 +56,16 @@ function ProfilePage() {
   // 获取用户发起的活动（该用户是 host）
   const hostedEvents = useMemo(
     () => events.filter((e) => e.host.name === profile?.nickname && e.status === "open"),
-    [events, profile?.nickname]
+    [events, profile?.nickname],
   );
 
   // 获取用户参加的活动（已报名 + 非发起者 + 进行中）
   const joinedEvents = useMemo(
     () =>
       events.filter(
-        (e) => isJoined(e.id) && e.host.name !== profile?.nickname && e.status === "open"
+        (e) => isJoined(e.id) && e.host.name !== profile?.nickname && e.status === "open",
       ),
-    [events, profile?.nickname, isJoined]
+    [events, profile?.nickname, isJoined],
   );
 
   if (!draft) {
@@ -114,6 +115,9 @@ function ProfilePage() {
 
   const onLogout = () => {
     logout();
+    setLogoutConfirm(false);
+    toast.success("已退出登录");
+    void router.navigate({ to: "/" });
   };
 
   return (
@@ -318,17 +322,15 @@ function ProfilePage() {
       <Dialog open={logoutConfirm} onOpenChange={setLogoutConfirm}>
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
-            <DialogTitle>确认退出登录？</DialogTitle>
-            <DialogDescription>
-              退出后将返回首页，下次访问需要重新注册。
-            </DialogDescription>
+            <DialogTitle>确定要退出登录吗？</DialogTitle>
+            <DialogDescription>退出后将返回首页。</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="ghost" onClick={() => setLogoutConfirm(false)}>
               取消
             </Button>
             <Button variant="destructive" onClick={onLogout}>
-              确认退出
+              确定
             </Button>
           </DialogFooter>
         </DialogContent>

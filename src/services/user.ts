@@ -7,7 +7,7 @@ ensureMockRoutes();
 
 export type UserProfile = typeof DEFAULT_PROFILE;
 
-const PROFILE_STORAGE_KEY = "gs_profile";
+const PROFILE_STORAGE_PREFIX = "gs_";
 
 export async function getProfile(): Promise<UserProfile> {
   return api.get<UserProfile>("/me");
@@ -31,7 +31,12 @@ export async function verifyEmail(code: string): Promise<UserProfile> {
 /** 清除本地用户资料 */
 export function clearProfile() {
   try {
-    localStorage.removeItem(PROFILE_STORAGE_KEY);
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith(PROFILE_STORAGE_PREFIX))
+      .forEach((key) => localStorage.removeItem(key));
+    Object.keys(sessionStorage)
+      .filter((key) => key.startsWith(PROFILE_STORAGE_PREFIX))
+      .forEach((key) => sessionStorage.removeItem(key));
   } catch (e) {
     console.warn("Failed to clear profile from localStorage", e);
   }
