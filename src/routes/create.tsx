@@ -125,9 +125,10 @@ function CreateEvent() {
       },
       description: description.trim() || "组织者还没有写介绍，直接来就好。",
       host,
+      ...(isPrivate ? { isPrivate: true, roomPassword: roomPassword.trim() } : {}),
     });
     setSubmitting(false);
-    toast.success("活动已发布");
+    toast.success(isPrivate ? "私密活动室已创建，去复制邀请链接" : "活动已发布");
     void navigate({ to: "/event/$id", params: { id: created.id } });
   };
 
