@@ -39,7 +39,7 @@ function EventDetail() {
   const { id } = Route.useParams();
   const { invite } = Route.useSearch();
   const router = useRouter();
-  const { events, isJoined, join, cancel, profile, loading } = useGS();
+  const { events, isJoined, join, cancel, profile, loading, isNewUser } = useGS();
   const event = events.find((e) => e.id === id);
 
   const [confirmJoin, setConfirmJoin] = useState(false);
@@ -49,14 +49,21 @@ function EventDetail() {
   const [pwError, setPwError] = useState("");
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [draft, setDraft] = useState("");
+  const [askRegister, setAskRegister] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  // 当通过邀请链接进入私密活动室时，自动弹出密码输入框
+  // 当通过邀请链接进入私密活动室时，检查是否为新用户
   useEffect(() => {
-    if (invite && event && event.isPrivate && !isJoined(event.id) && !askPassword && !confirmJoin) {
-      setAskPassword(true);
+    if (invite && event && event.isPrivate && !isJoined(event.id)) {
+      if (isNewUser()) {
+        // 新用户提示注册
+        setAskRegister(true);
+      } else {
+        // 已注册用户自动弹出密码框
+        setAskPassword(true);
+      }
     }
-  }, [invite, event, isJoined, askPassword, confirmJoin]);
+  }, [invite, event, isJoined, isNewUser]);
 
   useEffect(() => {
     if (!event) return;
@@ -109,6 +116,12 @@ function EventDetail() {
   };
 
   const startJoin = () => {
+    // 私密活动且通过邀请链接进入的新用户需要提示注册
+    if (isNewUser() && viaInvite && isPrivate) {
+      setAskRegister(true);
+      return;
+    }
+    
     if (isPrivate) {
       setPwError("");
       setPassword("");
@@ -373,7 +386,7 @@ function EventDetail() {
           </div>
           {ended ? (
             <Button disabled className="rounded-full px-8">
-              活动已结束
+              ���动已结束
             </Button>
           ) : joined ? (
             <Button
@@ -390,6 +403,26 @@ function EventDetail() {
           )}
         </div>
       </div>
+
+      {/* 新用户注册提示 */}
+      <Dialog open={askRegister} onOpenChange={setAskRegister}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>未注册</DialogTitle>
+            <DialogDescription>
+              您还没有注册账户，需要先完成注册才能参加活动。点击下方按钮进入注册页面。
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setAskRegister(false)}>
+              返回
+            </Button>
+            <Button onClick={() => window.location.href = "/profile"}>
+              前往注册
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={askPassword} onOpenChange={setAskPassword}>
         <DialogContent className="max-w-sm rounded-2xl">
