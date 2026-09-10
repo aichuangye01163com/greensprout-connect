@@ -78,7 +78,7 @@ export function GSProvider({ children }: { children: ReactNode }) {
         window.location.href = "/";
       },
       isNewUser: () => {
-        // 判断是否为新用户：profile 为 null 或为默认值
+        // 判断是否为新用户：profile 为 null
         return profile === null;
       },
     }),
