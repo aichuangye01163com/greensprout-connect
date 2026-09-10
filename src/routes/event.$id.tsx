@@ -153,6 +153,20 @@ function EventDetail() {
           返回活动大厅
         </button>
 
+        {isPrivate && (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 rounded-2xl border border-border bg-card p-4 text-sm">
+              <Lock className="mt-0.5 size-4 shrink-0 text-[color:var(--clay)]" />
+              <p className="min-w-0 text-muted-foreground">
+                {viaInvite ? "你通过定向邀请链接进入这场私密活动室。" : "这是一场私密活动室。"}
+                点击「报名加入」并输入活动室密码，即可报名并直接进入临时群。
+              </p>
+            </div>
+            {(isHost || joined) && <InviteCard event={event} />}
+          </div>
+        )}
+
+
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <img
             src={event.cover}
@@ -285,8 +299,13 @@ function EventDetail() {
           </div>
         </Section>
 
+        <div ref={chatRef} className="scroll-mt-4">
         <Section title="临时群聊">
-          {!room?.unlocked ? (
+          {isPrivate && !joined && !isHost ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Lock className="size-4" /> 私密活动室，输入密码报名后自动进入群聊
+            </p>
+          ) : !room?.unlocked ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="size-4" /> 有 1 人报名后自动解锁
             </p>
