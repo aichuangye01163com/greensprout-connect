@@ -83,11 +83,40 @@ function EventDetail() {
   const full = event.joined >= event.limit;
   const ended = event.status === "ended";
   const cancellable = canCancel(event);
+  const isPrivate = event.isPrivate === true;
+  const isHost = !!profile && profile.nickname === event.host.name;
+  const viaInvite = !!invite;
+
+  const enterChat = () => {
+    window.setTimeout(() => chatRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+  };
 
   const doJoin = async () => {
     await join(event.id);
     setConfirmJoin(false);
-    toast.success("报名成功，临时群已解锁");
+    setAskPassword(false);
+    setPassword("");
+    setPwError("");
+    toast.success(isPrivate ? "密码正确，已进入活动室临时群" : "报名成功，临时群已解锁");
+    enterChat();
+  };
+
+  const startJoin = () => {
+    if (isPrivate) {
+      setPwError("");
+      setPassword("");
+      setAskPassword(true);
+    } else {
+      setConfirmJoin(true);
+    }
+  };
+
+  const submitPassword = async () => {
+    if (!verifyRoomPassword(event, password)) {
+      setPwError("密码不正确，请向邀请你的人确认");
+      return;
+    }
+    await doJoin();
   };
 
   const doCancel = async () => {
@@ -95,6 +124,7 @@ function EventDetail() {
     setConfirmCancel(false);
     toast("已取消报名");
   };
+
 
   const doSend = async () => {
     if (!draft.trim()) return;
