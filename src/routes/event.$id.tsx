@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ChevronLeft, MapPin, Clock, Users, ShieldCheck, Send, Lock } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, MapPin, Clock, Users, ShieldCheck, Send, Lock, KeyRound } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
 import { Tag } from "@/components/gs/Chip";
 import { Countdown } from "@/components/gs/Countdown";
+import { InviteCard } from "@/components/gs/InviteCard";
 import { useGS } from "@/lib/gs-store";
-import { canCancel, CANCEL_LOCK_HOURS } from "@/services/activities";
+import { canCancel, CANCEL_LOCK_HOURS, verifyRoomPassword } from "@/services/activities";
 import { getChatRoom, sendMessage, DISSOLVE_HOURS_AFTER_END, type ChatRoom } from "@/services/chat";
 import { CATEGORY_MAP, fmtDate, fmtTime } from "@/data/greensprout";
 import {
@@ -17,9 +18,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/event/$id")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    invite: typeof search['invite'] === "string" ? (search['invite'] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "活动详情 · 绿芽局 GreenSprout" },
@@ -33,19 +38,25 @@ export const Route = createFileRoute("/event/$id")({
 
 function EventDetail() {
   const { id } = Route.useParams();
+  const { invite } = Route.useSearch();
   const router = useRouter();
   const { events, isJoined, join, cancel, profile, loading } = useGS();
   const event = events.find((e) => e.id === id);
 
   const [confirmJoin, setConfirmJoin] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [askPassword, setAskPassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [pwError, setPwError] = useState("");
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [draft, setDraft] = useState("");
+  const chatRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!event) return;
     void getChatRoom(event.id).then(setRoom);
   }, [event?.id, event?.joined]);
+
 
   if (loading) {
     return (
