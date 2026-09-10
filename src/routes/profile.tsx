@@ -1,5 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { BadgeCheck, LogOut } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
 import { Chip } from "@/components/gs/Chip";
@@ -41,7 +41,8 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, saveProfile, refresh, events, isJoined, logout } = useGS();
+  const router = useRouter();
+  const { profile, saveProfile, refresh, createdEvents, joinedEvents, isJoined, logout } = useGS();
   const [draft, setDraft] = useState<UserProfile | null>(profile);
   const [customTag, setCustomTag] = useState("");
   const [code, setCode] = useState("");
@@ -51,21 +52,6 @@ function ProfilePage() {
   useEffect(() => {
     if (profile) setDraft(profile);
   }, [profile]);
-
-  // 获取用户发起的活动（该用户是 host）
-  const hostedEvents = useMemo(
-    () => events.filter((e) => e.host.name === profile?.nickname && e.status === "open"),
-    [events, profile?.nickname]
-  );
-
-  // 获取用户参加的活动（已报名 + 非发起者 + 进行中）
-  const joinedEvents = useMemo(
-    () =>
-      events.filter(
-        (e) => isJoined(e.id) && e.host.name !== profile?.nickname && e.status === "open"
-      ),
-    [events, profile?.nickname, isJoined]
-  );
 
   if (!draft) {
     return (
@@ -113,7 +99,10 @@ function ProfilePage() {
   };
 
   const onLogout = () => {
+    setLogoutConfirm(false);
     logout();
+    toast.success("已退出登录");
+    void router.navigate({ to: "/" });
   };
 
   return (
@@ -142,11 +131,11 @@ function ProfilePage() {
 
         {/* 我的活动部分 */}
         <Card title="我发起的活动">
-          {hostedEvents.length === 0 ? (
+          {createdEvents.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-4">无</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
-              {hostedEvents.map((e) => (
+              {createdEvents.map((e) => (
                 <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
               ))}
             </div>

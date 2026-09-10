@@ -5,6 +5,7 @@
  */
 import { registerMockRoute } from "./api-client";
 import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
+import type { UserProfile } from "./user";
 
 const STORAGE_KEY_EVENTS = "gs_events";
 const STORAGE_KEY_PROFILE = "gs_profile";
@@ -21,10 +22,19 @@ function initEvents(): GSEvent[] {
   return [...EVENTS];
 }
 
-function initProfile() {
+function initProfile(): UserProfile | null {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_PROFILE);
-    if (stored) return JSON.parse(stored);
+    if (stored) {
+      const parsed = JSON.parse(stored) as UserProfile | null;
+      if (!parsed) return null;
+      return {
+        ...DEFAULT_PROFILE,
+        ...parsed,
+        createdEventIds: Array.isArray(parsed.createdEventIds) ? parsed.createdEventIds : [],
+        joinedEventIds: Array.isArray(parsed.joinedEventIds) ? parsed.joinedEventIds : [],
+      };
+    }
   } catch (e) {
     console.warn("Failed to load profile from localStorage", e);
   }
@@ -92,6 +102,15 @@ export function ensureMockRoutes() {
   registerMockRoute("POST", /^\/activities$/, (req) => {
     const event = req.body as GSEvent;
     db.events = [event, ...db.events];
+    if (db.profile) {
+      db.profile = {
+        ...db.profile,
+        createdEventIds: db.profile.createdEventIds.includes(event.id)
+          ? db.profile.createdEventIds
+          : [event.id, ...db.profile.createdEventIds],
+      };
+      saveProfile();
+    }
     saveEvents(); // 💾 持久化
     return event;
   });
@@ -105,7 +124,11 @@ export function ensureMockRoutes() {
             joined: e.joined + 1,
             attendees: [
               ...e.attendees,
-              { name: db.profile.nickname, avatar: db.profile.avatar, note: "刚刚报名" },
+              {
+                name: db.profile?.nickname ?? "匿名用户",
+                avatar: db.profile?.avatar ?? "🌱",
+                note: "刚刚报名",
+              },
             ],
           }
         : e,
@@ -113,6 +136,15 @@ export function ensureMockRoutes() {
     saveEvents(); // 💾 持久化
     if (!db.joinedIds.includes(id)) db.joinedIds = [...db.joinedIds, id];
     saveJoinedIds(); // 💾 持久化
+    if (db.profile) {
+      db.profile = {
+        ...db.profile,
+        joinedEventIds: db.profile.joinedEventIds.includes(id)
+          ? db.profile.joinedEventIds
+          : [...db.profile.joinedEventIds, id],
+      };
+      saveProfile();
+    }
     return { joinedIds: db.joinedIds, event: db.events.find((e) => e.id === id) };
   });
 
@@ -123,13 +155,22 @@ export function ensureMockRoutes() {
         ? {
             ...e,
             joined: Math.max(0, e.joined - 1),
-            attendees: e.attendees.filter((a) => a.name !== db.profile.nickname),
+            attendees: e.attendees.filter((a) =>
+              db.profile?.nickname ? a.name !== db.profile.nickname : true,
+            ),
           }
         : e,
     );
     saveEvents(); // 💾 持久化
     db.joinedIds = db.joinedIds.filter((x) => x !== id);
     saveJoinedIds(); // 💾 持久化
+    if (db.profile) {
+      db.profile = {
+        ...db.profile,
+        joinedEventIds: db.profile.joinedEventIds.filter((eventId) => eventId !== id),
+      };
+      saveProfile();
+    }
     return { joinedIds: db.joinedIds, event: db.events.find((e) => e.id === id) };
   });
 
@@ -164,8 +205,8 @@ export function ensureMockRoutes() {
     const id = idFrom(req.path, "/chat/");
     const text = (req.body as { text: string }).text;
     const msg = {
-      name: db.profile.nickname,
-      avatar: db.profile.avatar,
+      name: db.profile?.nickname ?? "匿名用户",
+      avatar: db.profile?.avatar ?? "🌱",
       text,
       time: "刚刚",
     };

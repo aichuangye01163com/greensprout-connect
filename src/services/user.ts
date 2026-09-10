@@ -8,9 +8,10 @@ ensureMockRoutes();
 export type UserProfile = typeof DEFAULT_PROFILE;
 
 const PROFILE_STORAGE_KEY = "gs_profile";
+const JOINED_STORAGE_KEY = "gs_joined_ids";
 
-export async function getProfile(): Promise<UserProfile> {
-  return api.get<UserProfile>("/me");
+export async function getProfile(): Promise<UserProfile | null> {
+  return api.get<UserProfile | null>("/me");
 }
 
 export async function updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
@@ -34,5 +35,15 @@ export function clearProfile() {
     localStorage.removeItem(PROFILE_STORAGE_KEY);
   } catch (e) {
     console.warn("Failed to clear profile from localStorage", e);
+  }
+}
+
+/** 退出登录（原型模式：清空本地会话数据） */
+export function logout() {
+  try {
+    localStorage.setItem(PROFILE_STORAGE_KEY, "null");
+    localStorage.removeItem(JOINED_STORAGE_KEY);
+  } catch (e) {
+    console.warn("Failed to clear session from localStorage", e);
   }
 }

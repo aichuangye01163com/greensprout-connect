@@ -609,6 +609,8 @@ export const DEFAULT_PROFILE = {
   landmines: "不喜欢临时放鸽子、活动中推销课程、过度打听收入。",
   showLiked: true,
   showHosted: true,
+  createdEventIds: [] as string[],
+  joinedEventIds: [] as string[],
 };
 
 export const AVATAR_CHOICES = ["🌱", "🍃", "☁️", "🌾", "🎐", "🌼", "🫧", "🌙", "🍋", "🪵"];

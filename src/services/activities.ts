@@ -10,6 +10,7 @@ import {
   type GSEvent,
   type TimeRangeId,
 } from "@/data/greensprout";
+import type { UserProfile } from "./user";
 
 ensureMockRoutes();
 
@@ -52,6 +53,30 @@ export async function listJoinedIds(): Promise<string[]> {
   return api.get<string[]>("/me/joined");
 }
 
+export async function listCreatedEvents(): Promise<GSEvent[]> {
+  const [events, profile] = await Promise.all([
+    api.get<GSEvent[]>("/activities"),
+    api.get<UserProfile | null>("/me"),
+  ]);
+  if (!profile?.createdEventIds.length) return [];
+  const ids = new Set(profile.createdEventIds);
+  return events
+    .filter((event) => ids.has(event.id) && !isExpired(event))
+    .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
+}
+
+export async function listJoinedEvents(): Promise<GSEvent[]> {
+  const [events, profile] = await Promise.all([
+    api.get<GSEvent[]>("/activities"),
+    api.get<UserProfile | null>("/me"),
+  ]);
+  if (!profile?.joinedEventIds.length) return [];
+  const ids = new Set(profile.joinedEventIds);
+  return events
+    .filter((event) => ids.has(event.id) && !isExpired(event))
+    .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
+}
+
 export async function joinActivity(id: string) {
   return api.post<{ joinedIds: string[]; event: GSEvent }>(`/activities/${id}/join`);
 }
@@ -66,6 +91,10 @@ export const CANCEL_LOCK_HOURS = 2;
 export function canCancel(event: Pick<GSEvent, "startsAt" | "status">, now = Date.now()) {
   if (event.status === "ended") return false;
   return new Date(event.startsAt).getTime() - now > CANCEL_LOCK_HOURS * 3600000;
+}
+
+export function isExpired(event: Pick<GSEvent, "startsAt" | "status">, now = Date.now()) {
+  return event.status === "ended" || new Date(event.startsAt).getTime() <= now;
 }
 
 export interface CreateActivityInput {

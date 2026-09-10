@@ -5,6 +5,8 @@ import * as userService from "@/services/user";
 
 interface Store {
   events: GSEvent[];
+  createdEvents: GSEvent[];
+  joinedEvents: GSEvent[];
   joinedIds: string[];
   profile: userService.UserProfile | null;
   loading: boolean;
@@ -22,19 +24,25 @@ const Ctx = createContext<Store | null>(null);
 
 export function GSProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<GSEvent[]>([]);
+  const [createdEvents, setCreatedEvents] = useState<GSEvent[]>([]);
+  const [joinedEvents, setJoinedEvents] = useState<GSEvent[]>([]);
   const [joinedIds, setJoinedIds] = useState<string[]>([]);
   const [profile, setProfile] = useState<userService.UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [e, j, p] = await Promise.all([
+    const [e, j, p, created, joined] = await Promise.all([
       activities.listActivities(),
       activities.listJoinedIds(),
       userService.getProfile(),
+      activities.listCreatedEvents(),
+      activities.listJoinedEvents(),
     ]);
     setEvents(e);
     setJoinedIds(j);
     setProfile(p);
+    setCreatedEvents(created);
+    setJoinedEvents(joined);
     setLoading(false);
   }, []);
 
@@ -45,6 +53,8 @@ export function GSProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Store>(
     () => ({
       events,
+      createdEvents,
+      joinedEvents,
       joinedIds,
       profile,
       loading,
@@ -54,15 +64,18 @@ export function GSProvider({ children }: { children: ReactNode }) {
         const res = await activities.joinActivity(id);
         setJoinedIds(res.joinedIds);
         setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
+        await refresh();
       },
       cancel: async (id) => {
         const res = await activities.cancelActivity(id);
         setJoinedIds(res.joinedIds);
         setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
+        await refresh();
       },
       createEvent: async (input) => {
         const created = await activities.createActivity(input);
         setEvents((prev) => [created, ...prev]);
+        await refresh();
         return created;
       },
       saveProfile: async (patch) => {
@@ -70,19 +83,19 @@ export function GSProvider({ children }: { children: ReactNode }) {
         setProfile(p);
       },
       logout: () => {
-        // 清除本地存储的用户数据
-        userService.clearProfile();
+        userService.logout();
         setProfile(null);
         setJoinedIds([]);
-        // 刷新页面回到首页
-        window.location.href = "/";
+        setEvents([]);
+        setCreatedEvents([]);
+        setJoinedEvents([]);
       },
       isNewUser: () => {
         // 判断是否为新用户：profile 为 null
         return profile === null;
       },
     }),
-    [events, joinedIds, profile, loading, refresh],
+    [events, createdEvents, joinedEvents, joinedIds, profile, loading, refresh],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
