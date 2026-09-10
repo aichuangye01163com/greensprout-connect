@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BadgeCheck } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
 import { Chip } from "@/components/gs/Chip";
+import { EventCard } from "@/components/gs/EventCard";
 import { useGS } from "@/lib/gs-store";
 import {
   AVATAR_CHOICES,
@@ -32,7 +33,7 @@ export const Route = createFileRoute("/profile")({
 });
 
 function ProfilePage() {
-  const { profile, saveProfile, refresh } = useGS();
+  const { profile, saveProfile, refresh, events, isJoined } = useGS();
   const [draft, setDraft] = useState<UserProfile | null>(profile);
   const [customTag, setCustomTag] = useState("");
   const [code, setCode] = useState("");
@@ -41,6 +42,21 @@ function ProfilePage() {
   useEffect(() => {
     if (profile) setDraft(profile);
   }, [profile]);
+
+  // 获取用户发起的活动（该用户是 host）
+  const hostedEvents = useMemo(
+    () => events.filter((e) => e.host.name === profile?.nickname && e.status === "open"),
+    [events, profile?.nickname]
+  );
+
+  // 获取用户参加的活动（已报名 + 非发起者 + 进行中）
+  const joinedEvents = useMemo(
+    () =>
+      events.filter(
+        (e) => isJoined(e.id) && e.host.name !== profile?.nickname && e.status === "open"
+      ),
+    [events, profile?.nickname, isJoined]
+  );
 
   if (!draft) {
     return (
@@ -101,6 +117,31 @@ function ProfilePage() {
             </p>
           </div>
         </header>
+
+        {/* 我的活动部分 */}
+        <Card title="我发起的活动">
+          {hostedEvents.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-4">无</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {hostedEvents.map((e) => (
+                <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card title="我参加的活动">
+          {joinedEvents.length === 0 ? (
+            <p className="text-center text-sm text-muted-foreground py-4">无</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {joinedEvents.map((e) => (
+                <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
+              ))}
+            </div>
+          )}
+        </Card>
 
         <Card title="头像">
           <div className="flex flex-wrap gap-2">
