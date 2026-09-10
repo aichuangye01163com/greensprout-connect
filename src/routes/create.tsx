@@ -86,6 +86,10 @@ function CreateEvent() {
       toast.error("请填写活动标题和地点");
       return;
     }
+    if (isPrivate && roomPassword.trim().length < 4) {
+      toast.error("请为私密活动室设置至少 4 位密码");
+      return;
+    }
     setSubmitting(true);
     const t = CATEGORIES.find((c) => c.id === category)!;
     const startHour = new Date(start).getHours();
