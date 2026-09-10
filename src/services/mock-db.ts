@@ -3,7 +3,7 @@
  * 使用 localStorage 保存数据，确保刷新后数据不丢失。
  * 接入真实后端时只需配置 VITE_API_BASE_URL，本文件可整体移除。
  */
-import { registerMockRoute } from "./api-client";
+import { ApiError, registerMockRoute } from "./api-client";
 import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 
 const STORAGE_KEY_EVENTS = "gs_events";
@@ -28,7 +28,7 @@ function initProfile() {
   } catch (e) {
     console.warn("Failed to load profile from localStorage", e);
   }
-  return { ...DEFAULT_PROFILE };
+  return null;
 }
 
 function initJoinedIds(): string[] {
@@ -76,6 +76,11 @@ function idFrom(path: string, prefix: string) {
   return path.replace(prefix, "").split("/")[0] ?? "";
 }
 
+function requireProfile() {
+  if (!db.profile) throw new ApiError(401, "请先登录");
+  return db.profile;
+}
+
 let registered = false;
 
 export function ensureMockRoutes() {
@@ -98,6 +103,7 @@ export function ensureMockRoutes() {
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/join$/, (req) => {
     const id = idFrom(req.path, "/activities/");
+    const currentProfile = requireProfile();
     db.events = db.events.map((e) =>
       e.id === id && e.joined < e.limit
         ? {
@@ -105,7 +111,7 @@ export function ensureMockRoutes() {
             joined: e.joined + 1,
             attendees: [
               ...e.attendees,
-              { name: db.profile.nickname, avatar: db.profile.avatar, note: "刚刚报名" },
+              { name: currentProfile.nickname, avatar: currentProfile.avatar, note: "刚刚报名" },
             ],
           }
         : e,
@@ -118,12 +124,13 @@ export function ensureMockRoutes() {
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/cancel$/, (req) => {
     const id = idFrom(req.path, "/activities/");
+    const currentProfile = requireProfile();
     db.events = db.events.map((e) =>
       e.id === id
         ? {
             ...e,
             joined: Math.max(0, e.joined - 1),
-            attendees: e.attendees.filter((a) => a.name !== db.profile.nickname),
+            attendees: e.attendees.filter((a) => a.name !== currentProfile.nickname),
           }
         : e,
     );
@@ -138,13 +145,13 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me$/, () => db.profile);
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
-    db.profile = { ...db.profile, ...(req.body as object) };
+    db.profile = { ...requireProfile(), ...(req.body as object) };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
 
   registerMockRoute("POST", /^\/me\/email\/verify$/, () => {
-    db.profile = { ...db.profile, emailVerified: true };
+    db.profile = { ...requireProfile(), emailVerified: true };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
@@ -163,15 +170,14 @@ export function ensureMockRoutes() {
   registerMockRoute("POST", /^\/chat\/[^/]+\/messages$/, (req) => {
     const id = idFrom(req.path, "/chat/");
     const text = (req.body as { text: string }).text;
+    const currentProfile = requireProfile();
     const msg = {
-      name: db.profile.nickname,
-      avatar: db.profile.avatar,
+      name: currentProfile.nickname,
+      avatar: currentProfile.avatar,
       text,
       time: "刚刚",
     };
-    db.events = db.events.map((e) =>
-      e.id === id ? { ...e, messages: [...e.messages, msg] } : e,
-    );
+    db.events = db.events.map((e) => (e.id === id ? { ...e, messages: [...e.messages, msg] } : e));
     saveEvents(); // 💾 持久化
     return msg;
   });

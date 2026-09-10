@@ -8,9 +8,11 @@ ensureMockRoutes();
 export type UserProfile = typeof DEFAULT_PROFILE;
 
 const PROFILE_STORAGE_KEY = "gs_profile";
+const JOINED_IDS_STORAGE_KEY = "gs_joined_ids";
+const STORAGE_KEY_PREFIX = "gs_";
 
-export async function getProfile(): Promise<UserProfile> {
-  return api.get<UserProfile>("/me");
+export async function getProfile(): Promise<UserProfile | null> {
+  return api.get<UserProfile | null>("/me");
 }
 
 export async function updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
@@ -34,5 +36,23 @@ export function clearProfile() {
     localStorage.removeItem(PROFILE_STORAGE_KEY);
   } catch (e) {
     console.warn("Failed to clear profile from localStorage", e);
+  }
+}
+
+/** 退出登录并清理本地会话 */
+export function logout() {
+  clearProfile();
+  try {
+    localStorage.removeItem(JOINED_IDS_STORAGE_KEY);
+  } catch (e) {
+    console.warn("Failed to clear joined IDs from localStorage", e);
+  }
+  try {
+    const sessionKeys = Array.from({ length: sessionStorage.length }, (_, index) =>
+      sessionStorage.key(index),
+    ).filter((key): key is string => key?.startsWith(STORAGE_KEY_PREFIX) === true);
+    sessionKeys.forEach((key) => sessionStorage.removeItem(key));
+  } catch (e) {
+    console.warn("Failed to clear sessionStorage", e);
   }
 }
