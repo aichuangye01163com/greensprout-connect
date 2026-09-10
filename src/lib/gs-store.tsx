@@ -14,6 +14,8 @@ interface Store {
   isJoined: (id: string) => boolean;
   createEvent: (input: activities.CreateActivityInput) => Promise<GSEvent>;
   saveProfile: (patch: Partial<userService.UserProfile>) => Promise<void>;
+  logout: () => void;
+  isNewUser: () => boolean;
 }
 
 const Ctx = createContext<Store | null>(null);
@@ -66,6 +68,18 @@ export function GSProvider({ children }: { children: ReactNode }) {
       saveProfile: async (patch) => {
         const p = await userService.updateProfile(patch);
         setProfile(p);
+      },
+      logout: () => {
+        // 清除本地存储的用户数据
+        userService.clearProfile();
+        setProfile(null);
+        setJoinedIds([]);
+        // 刷新页面回到首页
+        window.location.href = "/";
+      },
+      isNewUser: () => {
+        // 判断是否为新用户：profile 为 null 或为默认值
+        return profile === null;
       },
     }),
     [events, joinedIds, profile, loading, refresh],
