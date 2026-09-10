@@ -22,9 +22,8 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/event/$id")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    invite: typeof search['invite'] === "string" ? (search['invite'] as string) : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { invite?: string } =>
+    typeof search['invite'] === "string" ? { invite: search['invite'] } : {},
   head: () => ({
     meta: [
       { title: "活动详情 · 绿芽局 GreenSprout" },
