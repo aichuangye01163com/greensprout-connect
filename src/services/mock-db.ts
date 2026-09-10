@@ -28,7 +28,7 @@ function initProfile() {
   } catch (e) {
     console.warn("Failed to load profile from localStorage", e);
   }
-  return { ...DEFAULT_PROFILE };
+  return null;
 }
 
 function initJoinedIds(): string[] {
@@ -98,6 +98,7 @@ export function ensureMockRoutes() {
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/join$/, (req) => {
     const id = idFrom(req.path, "/activities/");
+    const currentProfile = db.profile ?? DEFAULT_PROFILE;
     db.events = db.events.map((e) =>
       e.id === id && e.joined < e.limit
         ? {
@@ -105,7 +106,7 @@ export function ensureMockRoutes() {
             joined: e.joined + 1,
             attendees: [
               ...e.attendees,
-              { name: db.profile.nickname, avatar: db.profile.avatar, note: "刚刚报名" },
+              { name: currentProfile.nickname, avatar: currentProfile.avatar, note: "刚刚报名" },
             ],
           }
         : e,
@@ -118,12 +119,13 @@ export function ensureMockRoutes() {
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/cancel$/, (req) => {
     const id = idFrom(req.path, "/activities/");
+    const currentProfile = db.profile ?? DEFAULT_PROFILE;
     db.events = db.events.map((e) =>
       e.id === id
         ? {
             ...e,
             joined: Math.max(0, e.joined - 1),
-            attendees: e.attendees.filter((a) => a.name !== db.profile.nickname),
+            attendees: e.attendees.filter((a) => a.name !== currentProfile.nickname),
           }
         : e,
     );
@@ -138,13 +140,13 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me$/, () => db.profile);
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
-    db.profile = { ...db.profile, ...(req.body as object) };
+    db.profile = { ...(db.profile ?? DEFAULT_PROFILE), ...(req.body as object) };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
 
   registerMockRoute("POST", /^\/me\/email\/verify$/, () => {
-    db.profile = { ...db.profile, emailVerified: true };
+    db.profile = { ...(db.profile ?? DEFAULT_PROFILE), emailVerified: true };
     saveProfile(); // 💾 持久化
     return db.profile;
   });
@@ -163,15 +165,14 @@ export function ensureMockRoutes() {
   registerMockRoute("POST", /^\/chat\/[^/]+\/messages$/, (req) => {
     const id = idFrom(req.path, "/chat/");
     const text = (req.body as { text: string }).text;
+    const currentProfile = db.profile ?? DEFAULT_PROFILE;
     const msg = {
-      name: db.profile.nickname,
-      avatar: db.profile.avatar,
+      name: currentProfile.nickname,
+      avatar: currentProfile.avatar,
       text,
       time: "刚刚",
     };
-    db.events = db.events.map((e) =>
-      e.id === id ? { ...e, messages: [...e.messages, msg] } : e,
-    );
+    db.events = db.events.map((e) => (e.id === id ? { ...e, messages: [...e.messages, msg] } : e));
     saveEvents(); // 💾 持久化
     return msg;
   });
