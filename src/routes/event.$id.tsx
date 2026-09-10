@@ -351,6 +351,7 @@ function EventDetail() {
             </div>
           )}
         </Section>
+        </div>
       </div>
 
       {/* 移动端固定底部操作条 */}
