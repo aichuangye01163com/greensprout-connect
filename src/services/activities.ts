@@ -53,11 +53,7 @@ export async function listJoinedIds(): Promise<string[]> {
   return api.get<string[]>("/me/joined");
 }
 
-export async function listCreatedEvents(): Promise<GSEvent[]> {
-  const [events, profile] = await Promise.all([
-    api.get<GSEvent[]>("/activities"),
-    api.get<UserProfile | null>("/me"),
-  ]);
+export function pickCreatedEvents(events: GSEvent[], profile: UserProfile | null): GSEvent[] {
   if (!profile?.createdEventIds.length) return [];
   const ids = new Set(profile.createdEventIds);
   return events
@@ -65,16 +61,28 @@ export async function listCreatedEvents(): Promise<GSEvent[]> {
     .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
 }
 
-export async function listJoinedEvents(): Promise<GSEvent[]> {
-  const [events, profile] = await Promise.all([
-    api.get<GSEvent[]>("/activities"),
-    api.get<UserProfile | null>("/me"),
-  ]);
+export function pickJoinedEvents(events: GSEvent[], profile: UserProfile | null): GSEvent[] {
   if (!profile?.joinedEventIds.length) return [];
   const ids = new Set(profile.joinedEventIds);
   return events
     .filter((event) => ids.has(event.id) && !isExpired(event))
     .sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt));
+}
+
+export async function listCreatedEvents(): Promise<GSEvent[]> {
+  const [events, profile] = await Promise.all([
+    api.get<GSEvent[]>("/activities"),
+    api.get<UserProfile | null>("/me"),
+  ]);
+  return pickCreatedEvents(events, profile);
+}
+
+export async function listJoinedEvents(): Promise<GSEvent[]> {
+  const [events, profile] = await Promise.all([
+    api.get<GSEvent[]>("/activities"),
+    api.get<UserProfile | null>("/me"),
+  ]);
+  return pickJoinedEvents(events, profile);
 }
 
 export async function joinActivity(id: string) {

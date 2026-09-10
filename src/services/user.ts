@@ -41,6 +41,7 @@ export function clearProfile() {
 /** 退出登录（原型模式：清空本地会话数据） */
 export function logout() {
   try {
+    clearProfile();
     localStorage.setItem(PROFILE_STORAGE_KEY, "null");
     localStorage.removeItem(JOINED_STORAGE_KEY);
   } catch (e) {

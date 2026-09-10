@@ -31,18 +31,16 @@ export function GSProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
-    const [e, j, p, created, joined] = await Promise.all([
+    const [e, j, p] = await Promise.all([
       activities.listActivities(),
       activities.listJoinedIds(),
       userService.getProfile(),
-      activities.listCreatedEvents(),
-      activities.listJoinedEvents(),
     ]);
     setEvents(e);
     setJoinedIds(j);
     setProfile(p);
-    setCreatedEvents(created);
-    setJoinedEvents(joined);
+    setCreatedEvents(activities.pickCreatedEvents(e, p));
+    setJoinedEvents(activities.pickJoinedEvents(e, p));
     setLoading(false);
   }, []);
 
@@ -62,20 +60,51 @@ export function GSProvider({ children }: { children: ReactNode }) {
       isJoined: (id) => joinedIds.includes(id),
       join: async (id) => {
         const res = await activities.joinActivity(id);
+        const nextEvents = events.map((e) => (e.id === id ? res.event : e));
+        const nextProfile = profile
+          ? {
+              ...profile,
+              joinedEventIds: profile.joinedEventIds.includes(id)
+                ? profile.joinedEventIds
+                : [...profile.joinedEventIds, id],
+            }
+          : profile;
         setJoinedIds(res.joinedIds);
-        setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
-        await refresh();
+        setEvents(nextEvents);
+        setProfile(nextProfile);
+        setCreatedEvents(activities.pickCreatedEvents(nextEvents, nextProfile));
+        setJoinedEvents(activities.pickJoinedEvents(nextEvents, nextProfile));
       },
       cancel: async (id) => {
         const res = await activities.cancelActivity(id);
+        const nextEvents = events.map((e) => (e.id === id ? res.event : e));
+        const nextProfile = profile
+          ? {
+              ...profile,
+              joinedEventIds: profile.joinedEventIds.filter((eventId) => eventId !== id),
+            }
+          : profile;
         setJoinedIds(res.joinedIds);
-        setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
-        await refresh();
+        setEvents(nextEvents);
+        setProfile(nextProfile);
+        setCreatedEvents(activities.pickCreatedEvents(nextEvents, nextProfile));
+        setJoinedEvents(activities.pickJoinedEvents(nextEvents, nextProfile));
       },
       createEvent: async (input) => {
         const created = await activities.createActivity(input);
-        setEvents((prev) => [created, ...prev]);
-        await refresh();
+        const nextEvents = [created, ...events];
+        const nextProfile = profile
+          ? {
+              ...profile,
+              createdEventIds: profile.createdEventIds.includes(created.id)
+                ? profile.createdEventIds
+                : [created.id, ...profile.createdEventIds],
+            }
+          : profile;
+        setEvents(nextEvents);
+        setProfile(nextProfile);
+        setCreatedEvents(activities.pickCreatedEvents(nextEvents, nextProfile));
+        setJoinedEvents(activities.pickJoinedEvents(nextEvents, nextProfile));
         return created;
       },
       saveProfile: async (patch) => {
@@ -86,7 +115,6 @@ export function GSProvider({ children }: { children: ReactNode }) {
         userService.logout();
         setProfile(null);
         setJoinedIds([]);
-        setEvents([]);
         setCreatedEvents([]);
         setJoinedEvents([]);
       },
