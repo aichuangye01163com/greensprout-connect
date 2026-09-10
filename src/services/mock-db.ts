@@ -3,7 +3,7 @@
  * 使用 localStorage 保存数据，确保刷新后数据不丢失。
  * 接入真实后端时只需配置 VITE_API_BASE_URL，本文件可整体移除。
  */
-import { registerMockRoute } from "./api-client";
+import { ApiError, registerMockRoute } from "./api-client";
 import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 
 const STORAGE_KEY_EVENTS = "gs_events";
@@ -76,6 +76,11 @@ function idFrom(path: string, prefix: string) {
   return path.replace(prefix, "").split("/")[0] ?? "";
 }
 
+function requireProfile() {
+  if (!db.profile) throw new ApiError(401, "请先登录");
+  return db.profile;
+}
+
 let registered = false;
 
 export function ensureMockRoutes() {
@@ -98,7 +103,7 @@ export function ensureMockRoutes() {
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/join$/, (req) => {
     const id = idFrom(req.path, "/activities/");
-    const currentProfile = db.profile ?? DEFAULT_PROFILE;
+    const currentProfile = requireProfile();
     db.events = db.events.map((e) =>
       e.id === id && e.joined < e.limit
         ? {
@@ -119,7 +124,7 @@ export function ensureMockRoutes() {
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/cancel$/, (req) => {
     const id = idFrom(req.path, "/activities/");
-    const currentProfile = db.profile ?? DEFAULT_PROFILE;
+    const currentProfile = requireProfile();
     db.events = db.events.map((e) =>
       e.id === id
         ? {
@@ -165,7 +170,7 @@ export function ensureMockRoutes() {
   registerMockRoute("POST", /^\/chat\/[^/]+\/messages$/, (req) => {
     const id = idFrom(req.path, "/chat/");
     const text = (req.body as { text: string }).text;
-    const currentProfile = db.profile ?? DEFAULT_PROFILE;
+    const currentProfile = requireProfile();
     const msg = {
       name: currentProfile.nickname,
       avatar: currentProfile.avatar,
