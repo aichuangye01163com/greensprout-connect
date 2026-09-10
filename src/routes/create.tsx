@@ -255,6 +255,27 @@ function CreateEvent() {
               )}
             </Card>
 
+            <Card title="私密活动室">
+              <div className="flex items-center justify-between rounded-xl bg-secondary/60 px-3 py-2.5">
+                <span className="text-sm">设为私密活动室</span>
+                <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+              </div>
+              {isPrivate && (
+                <>
+                  <Field label="活动室密码（分享给被邀请的人）">
+                    <Input
+                      value={roomPassword}
+                      onChange={(e) => setRoomPassword(e.target.value)}
+                      placeholder="例如：9527"
+                    />
+                  </Field>
+                  <p className="text-xs text-muted-foreground">
+                    私密活动在活动大厅只显示锁标识，需输入密码才能报名。发布后可在详情页复制定向邀请链接。
+                  </p>
+                </>
+              )}
+            </Card>
+
             <Card title="报名条件">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="最小年龄">

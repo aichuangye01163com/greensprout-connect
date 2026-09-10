@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Clock, Users } from "lucide-react";
+import { MapPin, Clock, Users, Lock } from "lucide-react";
 import { Tag } from "./Chip";
 import { Countdown } from "./Countdown";
 import { CATEGORY_MAP, fmtDate, fmtTime, type GSEvent } from "@/data/greensprout";
