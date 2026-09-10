@@ -8,9 +8,11 @@ ensureMockRoutes();
 export type UserProfile = typeof DEFAULT_PROFILE;
 
 const PROFILE_STORAGE_KEY = "gs_profile";
+const JOINED_IDS_STORAGE_KEY = "gs_joined_ids";
+const LOGOUT_SESSION_KEY = "gs_logged_out";
 
-export async function getProfile(): Promise<UserProfile> {
-  return api.get<UserProfile>("/me");
+export async function getProfile(): Promise<UserProfile | null> {
+  return api.get<UserProfile | null>("/me");
 }
 
 export async function updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
@@ -34,5 +36,20 @@ export function clearProfile() {
     localStorage.removeItem(PROFILE_STORAGE_KEY);
   } catch (e) {
     console.warn("Failed to clear profile from localStorage", e);
+  }
+}
+
+export function logout() {
+  clearProfile();
+  try {
+    localStorage.removeItem(JOINED_IDS_STORAGE_KEY);
+  } catch (e) {
+    console.warn("Failed to clear joined IDs from localStorage", e);
+  }
+  try {
+    sessionStorage.clear();
+    sessionStorage.setItem(LOGOUT_SESSION_KEY, "1");
+  } catch (e) {
+    console.warn("Failed to clear session storage", e);
   }
 }

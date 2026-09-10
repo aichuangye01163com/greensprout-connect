@@ -9,6 +9,15 @@ import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 const STORAGE_KEY_EVENTS = "gs_events";
 const STORAGE_KEY_PROFILE = "gs_profile";
 const STORAGE_KEY_JOINED = "gs_joined_ids";
+const LOGOUT_SESSION_KEY = "gs_logged_out";
+
+function hasLoggedOutSession() {
+  try {
+    return sessionStorage.getItem(LOGOUT_SESSION_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 // 初始化数据：从 localStorage 读取，如果不存在则使用默认值
 function initEvents(): GSEvent[] {
@@ -133,9 +142,9 @@ export function ensureMockRoutes() {
     return { joinedIds: db.joinedIds, event: db.events.find((e) => e.id === id) };
   });
 
-  registerMockRoute("GET", /^\/me\/joined$/, () => db.joinedIds);
+  registerMockRoute("GET", /^\/me\/joined$/, () => (hasLoggedOutSession() ? [] : db.joinedIds));
 
-  registerMockRoute("GET", /^\/me$/, () => db.profile);
+  registerMockRoute("GET", /^\/me$/, () => (hasLoggedOutSession() ? null : db.profile));
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
     db.profile = { ...db.profile, ...(req.body as object) };
@@ -169,9 +178,7 @@ export function ensureMockRoutes() {
       text,
       time: "刚刚",
     };
-    db.events = db.events.map((e) =>
-      e.id === id ? { ...e, messages: [...e.messages, msg] } : e,
-    );
+    db.events = db.events.map((e) => (e.id === id ? { ...e, messages: [...e.messages, msg] } : e));
     saveEvents(); // 💾 持久化
     return msg;
   });
