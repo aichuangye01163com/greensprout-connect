@@ -140,8 +140,13 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me$/, () => db.profile);
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
-    if (!db.profile) throw new Error("请先注册后再保存资料");
-    db.profile = { ...db.profile, ...(req.body as object) };
+    const patch = req.body as Record<string, unknown>;
+    if (!db.profile) {
+      if (!patch || Object.keys(patch).length === 0) throw new Error("请先注册后再保存资料");
+      db.profile = patch as typeof DEFAULT_PROFILE;
+    } else {
+      db.profile = { ...db.profile, ...patch };
+    }
     saveProfile(); // 💾 持久化
     return db.profile;
   });
