@@ -60,7 +60,7 @@ function Discovery() {
                 登录
               </Link>
               <Link
-                to="/profile"
+                to="/register"
                 className="inline-flex flex-1 items-center justify-center rounded-xl bg-secondary px-4 py-2 text-sm text-foreground transition-colors hover:bg-secondary/80"
               >
                 注册
@@ -99,19 +99,13 @@ function Discovery() {
           </div>
         </div>
 
-        {loading ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">正在加载同城活动…</p>
-        ) : list.length === 0 ? (
-          <p className="py-16 text-center text-sm text-muted-foreground">
-            这个时间段还没有合适的局，换个筛选或自己发起一场吧。
-          </p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {list.map((e) => (
-              <EventCard key={e.id} event={e} joined={isJoined(e.id)} />
-            ))}
-          </div>
-        )}
+        <section className="grid gap-4 md:grid-cols-2">
+          {loading
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-44 animate-pulse rounded-2xl border border-border bg-card/60" />
+              ))
+            : list.map((e) => <EventCard key={e.id} event={e} joined={isJoined(e.id)} />)}
+        </section>
       </section>
     </AppShell>
   );
