@@ -377,16 +377,51 @@ function EventDetail() {
               取消报名
             </Button>
           ) : (
-            <Button
-              disabled={full}
-              className="rounded-full px-8"
-              onClick={() => setConfirmJoin(true)}
-            >
-              {full ? "已满员" : "立即报名"}
+            <Button disabled={full} className="rounded-full px-8" onClick={startJoin}>
+              {full ? "已满员" : isPrivate ? "报名加入（需密码）" : "立即报名"}
             </Button>
           )}
         </div>
       </div>
+
+      <Dialog open={askPassword} onOpenChange={setAskPassword}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-4" /> 输入活动室密码
+            </DialogTitle>
+            <DialogDescription>
+              这是一场私密活动室，请输入组织者发给你的密码。验证通过后将直接报名并进入临时群。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={password}
+              autoFocus
+              inputMode="text"
+              placeholder="活动室密码"
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPwError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && void submitPassword()}
+            />
+            {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+            <p className="text-xs text-muted-foreground">
+              · 费用 {event.fee === 0 ? "免费" : `¥${event.fee}`}
+              {event.deposit > 0 ? ` · 含 ¥${event.deposit} 不退定金` : ""} · 开始前{" "}
+              {CANCEL_LOCK_HOURS} 小时内不可取消
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setAskPassword(false)}>
+              取消
+            </Button>
+            <Button onClick={() => void submitPassword()}>验证并加入</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={confirmJoin} onOpenChange={setConfirmJoin}>
         <DialogContent className="max-w-sm rounded-2xl">
