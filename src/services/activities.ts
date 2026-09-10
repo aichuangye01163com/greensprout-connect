@@ -83,18 +83,44 @@ export interface CreateActivityInput {
   eligibility: GSEvent["eligibility"];
   description: string;
   host: GSEvent["host"];
+  isPrivate?: boolean;
+  roomPassword?: string;
 }
 
 export async function createActivity(input: CreateActivityInput): Promise<GSEvent> {
+  const id = `u${Date.now()}`;
   const event: GSEvent = {
     ...input,
-    id: `u${Date.now()}`,
+    id,
     joined: 1,
     status: "open",
     attendees: [{ name: input.host.name, avatar: input.host.avatar, note: "组织者" }],
     messages: [],
+    ...(input.isPrivate ? { inviteToken: makeInviteToken(id) } : {}),
   };
   return api.post<GSEvent>("/activities", event);
+}
+
+/* ---------------- 私密活动室 ---------------- */
+
+export function isPrivateEvent(event: Pick<GSEvent, "isPrivate">) {
+  return event.isPrivate === true;
+}
+
+/** 原型阶段的本地口令校验，后端接入后替换为一次远程校验请求 */
+export function verifyRoomPassword(
+  event: Pick<GSEvent, "isPrivate" | "roomPassword">,
+  input: string,
+) {
+  if (!event.isPrivate) return true;
+  return (event.roomPassword ?? "").trim() === input.trim();
+}
+
+/** 生成定向邀请链接（可直接复制分享） */
+export function buildInviteLink(event: Pick<GSEvent, "id" | "inviteToken">) {
+  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const token = event.inviteToken ?? "";
+  return `${origin}/event/${event.id}?invite=${encodeURIComponent(token)}`;
 }
 
 export function templateDefaults(category: CategoryId) {
