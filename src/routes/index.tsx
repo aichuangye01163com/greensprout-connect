@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Discovery() {
-  const { events, loading, isJoined } = useGS();
+  const { events, loading, isJoined, profile } = useGS();
   const [timeRange, setTimeRange] = useState<TimeRangeId>("1month");
   const [cats, setCats] = useState<CategoryId[]>([]);
   const [keyword, setKeyword] = useState("");
@@ -47,6 +47,27 @@ function Discovery() {
           <h1 className="text-xl tracking-tight">今天，去认识几个真实的人</h1>
           <p className="text-sm text-muted-foreground">上海 · 共 {events.length} 场同城小局</p>
         </header>
+        {!profile && (
+          <div className="rounded-2xl border border-border bg-card/90 p-4">
+            <p className="mb-3 text-sm text-muted-foreground">
+              先登录或注册，报名后即可进入临时群聊。
+            </p>
+            <div className="flex gap-2">
+              <Link
+                to="/login"
+                className="inline-flex flex-1 items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm text-foreground transition-colors hover:bg-secondary/50"
+              >
+                登录
+              </Link>
+              <Link
+                to="/profile"
+                className="inline-flex flex-1 items-center justify-center rounded-xl bg-secondary px-4 py-2 text-sm text-foreground transition-colors hover:bg-secondary/80"
+              >
+                注册
+              </Link>
+            </div>
+          </div>
+        )}
 
         <label className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2.5">
           <Search className="size-4 shrink-0 text-muted-foreground" />

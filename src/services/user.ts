@@ -9,10 +9,11 @@ export type UserProfile = typeof DEFAULT_PROFILE;
 export interface RegisterInput {
   nickname: string;
   email: string;
+  phone?: string;
   password: string;
 }
 export interface LoginInput {
-  email: string;
+  account: string;
   password: string;
 }
 export type UserArchiveFieldValue = string | number | boolean | null;

@@ -417,7 +417,7 @@ function EventDetail() {
             <Button variant="ghost" onClick={() => setAskRegister(false)}>
               返回
             </Button>
-            <Button onClick={() => window.location.href = "/register"}>
+            <Button onClick={() => window.location.href = "/profile"}>
               前往注册
             </Button>
           </DialogFooter>

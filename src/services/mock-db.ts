@@ -152,6 +152,16 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function normalizePhone(input: string) {
+  return input.replace(/[^\d+]/g, "");
+}
+
+function accountPhone(account: MockAccount) {
+  const raw = account.archive.customFields["phone"];
+  if (typeof raw !== "string") return "";
+  return normalizePhone(raw);
+}
+
 function makeArchive(profile: typeof DEFAULT_PROFILE): UserArchive {
   return {
     profile: cloneProfile(profile),
@@ -312,14 +322,23 @@ export function ensureMockRoutes() {
   });
 
   registerMockRoute("POST", /^\/auth\/register$/, (req) => {
-    const body = (req.body ?? {}) as { email?: string; password?: string; nickname?: string };
+    const body = (req.body ?? {}) as {
+      email?: string;
+      phone?: string;
+      password?: string;
+      nickname?: string;
+    };
     const email = body.email?.trim().toLowerCase() ?? "";
+    const phone = normalizePhone(body.phone?.trim() ?? "");
     const password = body.password?.trim() ?? "";
     const nickname = body.nickname?.trim() ?? "";
     if (!email || !password || !nickname) throw new ApiError(400, "请填写昵称、邮箱和密码");
     if (password.length < 6) throw new ApiError(400, "密码至少 6 位");
     if (db.accounts.some((account) => account.email === email)) {
       throw new ApiError(409, "该邮箱已注册，请直接登录");
+    }
+    if (phone && db.accounts.some((account) => accountPhone(account) === phone)) {
+      throw new ApiError(409, "该手机号已注册，请直接登录");
     }
 
     const profile = {
@@ -334,7 +353,10 @@ export function ensureMockRoutes() {
       password,
       profile,
       joinedIds: [],
-      archive: makeArchive(profile),
+      archive: {
+        ...makeArchive(profile),
+        customFields: phone ? { phone } : {},
+      },
     };
     db.accounts = [account, ...db.accounts];
     db.currentAccountEmail = email;
@@ -348,10 +370,14 @@ export function ensureMockRoutes() {
   });
 
   registerMockRoute("POST", /^\/auth\/login$/, (req) => {
-    const body = (req.body ?? {}) as { email?: string; password?: string };
-    const email = body.email?.trim().toLowerCase() ?? "";
+    const body = (req.body ?? {}) as { account?: string; email?: string; password?: string };
+    const accountInput = body.account?.trim() || body.email?.trim() || "";
+    const email = accountInput.toLowerCase();
+    const phone = normalizePhone(accountInput);
     const password = body.password?.trim() ?? "";
-    const account = db.accounts.find((item) => item.email === email);
+    const account = db.accounts.find(
+      (item) => item.email === email || (phone && accountPhone(item) === phone),
+    );
     if (!account) {
       throw new ApiError(401, "邮箱或密码错误");
     }

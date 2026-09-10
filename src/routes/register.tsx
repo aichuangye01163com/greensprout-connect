@@ -18,6 +18,7 @@ function RegisterPage() {
   const { register, profile } = useGS();
   const [nickname, setNickname] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,7 +33,12 @@ function RegisterPage() {
     }
     setSubmitting(true);
     try {
-      await register({ nickname: nickname.trim(), email: email.trim(), password: password.trim() });
+      await register({
+        nickname: nickname.trim(),
+        email: email.trim(),
+        phone: phone.trim() || undefined,
+        password: password.trim(),
+      });
       toast.success("注册成功");
       void navigate({ to: "/profile" });
     } catch (e) {
@@ -79,6 +85,15 @@ function RegisterPage() {
             placeholder="you@example.com"
           />
         </Field>
+        <Field id="register-phone" label="手机号（可选）">
+          <Input
+            id="register-phone"
+            value={phone}
+            inputMode="tel"
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="例如：13800000000"
+          />
+        </Field>
         <Field id="register-password" label="密码">
           <Input
             id="register-password"
@@ -93,7 +108,7 @@ function RegisterPage() {
         </Button>
         <p className="text-center text-sm text-muted-foreground">
           已有账户？
-          <Link to="/login" className="ml-1 text-primary underline">
+          <Link to="/login" className="ml-1 text-foreground underline underline-offset-2">
             去登录
           </Link>
         </p>
