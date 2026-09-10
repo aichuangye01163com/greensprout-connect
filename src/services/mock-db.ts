@@ -3,7 +3,7 @@
  * 使用 localStorage 保存数据，确保刷新后数据不丢失。
  * 接入真实后端时只需配置 VITE_API_BASE_URL，本文件可整体移除。
  */
-import { registerMockRoute } from "./api-client";
+import { ApiError, registerMockRoute } from "./api-client";
 import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 
 const STORAGE_KEY_EVENTS = "gs_events";
@@ -150,7 +150,7 @@ export function ensureMockRoutes() {
   registerMockRoute("GET", /^\/me\/joined$/, () => (hasLoggedOutSession() ? [] : db.joinedIds));
 
   registerMockRoute("GET", /^\/me$/, () => {
-    if (hasLoggedOutSession()) throw new Error("未登录");
+    if (hasLoggedOutSession()) throw new ApiError(401, "未登录");
     return db.profile;
   });
 
