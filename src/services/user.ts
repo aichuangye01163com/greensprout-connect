@@ -9,8 +9,8 @@ export type UserProfile = typeof DEFAULT_PROFILE;
 
 const PROFILE_STORAGE_KEY = "gs_profile";
 
-export async function getProfile(): Promise<UserProfile> {
-  return api.get<UserProfile>("/me");
+export async function getProfile(): Promise<UserProfile | null> {
+  return api.get<UserProfile | null>("/me");
 }
 
 export async function updateProfile(patch: Partial<UserProfile>): Promise<UserProfile> {
