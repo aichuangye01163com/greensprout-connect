@@ -1,7 +1,5 @@
 /**
- * 可配置的 API 客户端 / 适配层。
- *
- * - baseURL、超时、鉴权头均可通过环境变量或 configureApi() 配置
+ * 轻量 API 客户端：
  * - 未配置 baseURL 时自动走本地 mock 适配器（当前原型模式）
  * - 请求/响应拦截器预留，便于接入真实后端、微信小程序 wx.request 或 Capacitor 原生壳
  */
@@ -39,7 +37,6 @@ export function registerMockRoute(
 export const mockTransport: Transport = async (req) => {
   const match = mockHandlers.find((h) => h.method === req.method && h.pattern.test(req.path));
   if (!match) throw new ApiError(404, `未实现的接口: ${req.method} ${req.path}`);
-  // 模拟网络延迟，方便观察加载态
   await new Promise((r) => setTimeout(r, 120));
   return match.handler(req);
 };
@@ -61,6 +58,7 @@ export const fetchTransport: Transport = async (req, config) => {
     ...(req.body === undefined ? {} : { body: JSON.stringify(req.body) }),
     signal: AbortSignal.timeout(config.timeout),
   });
+
   if (!res.ok) throw new ApiError(res.status, await res.text());
   return res.json();
 };
@@ -97,11 +95,10 @@ export async function request<T>(req: ApiRequest): Promise<T> {
 }
 
 export const api = {
-  get: <T>(path: string, query?: ApiRequest["query"]) =>
-    request<T>({ method: "GET", path, ...(query ? { query } : {}) }),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>({ method: "POST", path, ...(body === undefined ? {} : { body }) }),
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>({ method: "PATCH", path, ...(body === undefined ? {} : { body }) }),
-  del: <T>(path: string) => request<T>({ method: "DELETE", path }),
+  get: <T>(path: string, query?: Record<string, string | number | boolean | undefined>) =>
+    request<T>({ method: "GET", path, query }),
+  post: <T>(path: string, body?: unknown) => request<T>({ method: "POST", path, body }),
+  patch: <T>(path: string, body?: unknown) => request<T>({ method: "PATCH", path, body }),
+  delete: <T>(path: string, query?: Record<string, string | number | boolean | undefined>) =>
+    request<T>({ method: "DELETE", path, query }),
 };
