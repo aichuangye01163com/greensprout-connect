@@ -38,6 +38,6 @@ export function clearProfile() {
       .filter((key) => key.startsWith(PROFILE_STORAGE_PREFIX))
       .forEach((key) => sessionStorage.removeItem(key));
   } catch (e) {
-    console.warn("Failed to clear profile from localStorage", e);
+    console.warn("Failed to clear user data from web storage", e);
   }
 }
