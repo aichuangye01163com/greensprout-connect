@@ -56,16 +56,18 @@ function LoginPage() {
           <h1 className="text-xl tracking-tight">登录账户</h1>
           <p className="text-sm text-muted-foreground">登录后可继续报名、发起活动和进入临时群。</p>
         </header>
-        <Field label="邮箱">
+        <Field id="login-email" label="邮箱">
           <Input
+            id="login-email"
             value={email}
             inputMode="email"
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
           />
         </Field>
-        <Field label="密码">
+        <Field id="login-password" label="密码">
           <Input
+            id="login-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -86,10 +88,12 @@ function LoginPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Label htmlFor={id} className="text-xs text-muted-foreground">
+        {label}
+      </Label>
       {children}
     </div>
   );

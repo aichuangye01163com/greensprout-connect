@@ -14,7 +14,7 @@ const STORAGE_KEY_CURRENT_ACCOUNT = "gs_current_account_email";
 
 type MockAccount = {
   email: string;
-  password: string;
+  password: string | null;
   profile: typeof DEFAULT_PROFILE;
   joinedIds: string[];
 };
@@ -150,13 +150,15 @@ export function ensureMockRoutes() {
 
   if (!db.currentAccountEmail && db.profile?.email) {
     db.currentAccountEmail = db.profile.email;
-    const hasLegacyAccount = db.accounts.some((account) => account.email === db.currentAccountEmail);
+    const hasLegacyAccount = db.accounts.some(
+      (account) => account.email === db.currentAccountEmail,
+    );
     if (!hasLegacyAccount) {
       db.accounts = [
         ...db.accounts,
         {
           email: db.currentAccountEmail,
-          password: "123456",
+          password: null,
           profile: db.profile,
           joinedIds: db.joinedIds,
         },
@@ -237,6 +239,7 @@ export function ensureMockRoutes() {
     const password = body.password?.trim() ?? "";
     const nickname = body.nickname?.trim() ?? "";
     if (!email || !password || !nickname) throw new ApiError(400, "请填写昵称、邮箱和密码");
+    if (password.length < 6) throw new ApiError(400, "密码至少 6 位");
     if (db.accounts.some((account) => account.email === email)) {
       throw new ApiError(409, "该邮箱已注册，请直接登录");
     }
@@ -264,7 +267,13 @@ export function ensureMockRoutes() {
     const email = body.email?.trim().toLowerCase() ?? "";
     const password = body.password?.trim() ?? "";
     const account = db.accounts.find((item) => item.email === email);
-    if (!account || account.password !== password) {
+    if (!account) {
+      throw new ApiError(401, "邮箱或密码错误");
+    }
+    if (account.password === null) {
+      throw new ApiError(401, "该账户需要先完成注册后再登录");
+    }
+    if (account.password !== password) {
       throw new ApiError(401, "邮箱或密码错误");
     }
     db.currentAccountEmail = account.email;

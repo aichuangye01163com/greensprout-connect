@@ -25,6 +25,10 @@ function RegisterPage() {
       toast.error("请填写昵称、邮箱和密码");
       return;
     }
+    if (password.trim().length < 6) {
+      toast.error("密码至少 6 位");
+      return;
+    }
     setSubmitting(true);
     try {
       await register({ nickname: nickname.trim(), email: email.trim(), password: password.trim() });
@@ -57,19 +61,26 @@ function RegisterPage() {
           <h1 className="text-xl tracking-tight">注册账户</h1>
           <p className="text-sm text-muted-foreground">创建账户后即可报名、进群和管理个人资料。</p>
         </header>
-        <Field label="昵称">
-          <Input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="例如：林小满" />
-        </Field>
-        <Field label="邮箱">
+        <Field id="register-nickname" label="昵称">
           <Input
+            id="register-nickname"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            placeholder="例如：林小满"
+          />
+        </Field>
+        <Field id="register-email" label="邮箱">
+          <Input
+            id="register-email"
             value={email}
             inputMode="email"
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
           />
         </Field>
-        <Field label="密码">
+        <Field id="register-password" label="密码">
           <Input
+            id="register-password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -90,10 +101,12 @@ function RegisterPage() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ id, label, children }: { id: string; label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <Label htmlFor={id} className="text-xs text-muted-foreground">
+        {label}
+      </Label>
       {children}
     </div>
   );
