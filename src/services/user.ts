@@ -7,6 +7,8 @@ ensureMockRoutes();
 
 export type UserProfile = typeof DEFAULT_PROFILE;
 
+const PROFILE_STORAGE_KEY = "gs_profile";
+
 export async function getProfile(): Promise<UserProfile> {
   return api.get<UserProfile>("/me");
 }
@@ -24,4 +26,13 @@ export async function sendVerificationCode(email: string): Promise<{ sent: true;
 export async function verifyEmail(code: string): Promise<UserProfile> {
   if (code.trim() !== "8080") throw new Error("验证码不正确，演示验证码为 8080");
   return api.post<UserProfile>("/me/email/verify");
+}
+
+/** 清除本地用户资料 */
+export function clearProfile() {
+  try {
+    localStorage.removeItem(PROFILE_STORAGE_KEY);
+  } catch (e) {
+    console.warn("Failed to clear profile from localStorage", e);
+  }
 }
