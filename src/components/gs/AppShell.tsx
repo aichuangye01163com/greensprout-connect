@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Compass, PlusCircle, User } from "lucide-react";
 import type { ReactNode } from "react";
+import { useGS } from "@/lib/gs-store";
 
 const NAV = [
   { to: "/", label: "活动大厅", icon: Compass },
@@ -9,6 +10,8 @@ const NAV = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const { profile } = useGS();
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur">
@@ -17,19 +20,44 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span className="text-lg tracking-[0.2em] text-foreground">绿芽局</span>
             <span className="text-xs tracking-[0.28em] text-muted-foreground">GREENSPROUT</span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
-            {NAV.map((n) => (
+          <div className="flex items-center gap-2">
+            <nav className="hidden items-center gap-1 md:flex">
+              {NAV.map((n) => (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  activeOptions={{ exact: n.to === "/" }}
+                  className="rounded-full px-4 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                  activeProps={{ className: "bg-secondary text-foreground" }}
+                >
+                  {n.label}
+                </Link>
+              ))}
+            </nav>
+            {profile ? (
               <Link
-                key={n.to}
-                to={n.to}
-                activeOptions={{ exact: n.to === "/" }}
-                className="rounded-full px-4 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                activeProps={{ className: "bg-secondary text-foreground" }}
+                to="/profile"
+                className="grid size-9 place-items-center rounded-full border border-border text-sm"
               >
-                {n.label}
+                {profile.avatar}
               </Link>
-            ))}
-          </nav>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className="rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  登录
+                </Link>
+                <Link
+                  to="/profile"
+                  className="rounded-full border border-border bg-secondary px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-secondary/80"
+                >
+                  注册
+                </Link>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
