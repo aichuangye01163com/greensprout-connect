@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MapPin, Clock, Users } from "lucide-react";
+import { MapPin, Clock, Users, Lock } from "lucide-react";
 import { Tag } from "./Chip";
 import { Countdown } from "./Countdown";
 import { CATEGORY_MAP, fmtDate, fmtTime, type GSEvent } from "@/data/greensprout";
@@ -26,10 +26,15 @@ export function EventCard({ event, joined }: { event: GSEvent; joined?: boolean 
             ended ? "grayscale opacity-70" : ""
           }`}
         />
-        <div className="absolute left-3 top-3 flex gap-2">
+        <div className="absolute left-3 top-3 flex flex-wrap gap-2">
           <span className="rounded-full bg-background/85 px-2.5 py-1 text-xs backdrop-blur">
             {cat.emoji} {cat.label}
           </span>
+          {event.isPrivate && (
+            <span className="flex items-center gap-1 rounded-full bg-foreground/80 px-2.5 py-1 text-xs text-background">
+              <Lock className="size-3" /> 私密活动室
+            </span>
+          )}
           {ended && (
             <span className="rounded-full bg-foreground/75 px-2.5 py-1 text-xs text-background">
               已结束

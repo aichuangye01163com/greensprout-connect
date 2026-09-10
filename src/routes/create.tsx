@@ -61,6 +61,8 @@ function CreateEvent() {
   const [education, setEducation] = useState("不限");
   const [income, setIncome] = useState("不限");
   const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [roomPassword, setRoomPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const applyTemplate = (id: CategoryId) => {
@@ -82,6 +84,10 @@ function CreateEvent() {
   const submit = async () => {
     if (!title.trim() || !location.trim()) {
       toast.error("请填写活动标题和地点");
+      return;
+    }
+    if (isPrivate && roomPassword.trim().length < 4) {
+      toast.error("请为私密活动室设置至少 4 位密码");
       return;
     }
     setSubmitting(true);
@@ -119,9 +125,10 @@ function CreateEvent() {
       },
       description: description.trim() || "组织者还没有写介绍，直接来就好。",
       host,
+      ...(isPrivate ? { isPrivate: true, roomPassword: roomPassword.trim() } : {}),
     });
     setSubmitting(false);
-    toast.success("活动已发布");
+    toast.success(isPrivate ? "私密活动室已创建，去复制邀请链接" : "活动已发布");
     void navigate({ to: "/event/$id", params: { id: created.id } });
   };
 
@@ -252,6 +259,27 @@ function CreateEvent() {
                 <Field label="定金金额（元，爽约不退）">
                   <Input type="number" value={deposit} onChange={(e) => setDeposit(Number(e.target.value))} />
                 </Field>
+              )}
+            </Card>
+
+            <Card title="私密活动室">
+              <div className="flex items-center justify-between rounded-xl bg-secondary/60 px-3 py-2.5">
+                <span className="text-sm">设为私密活动室</span>
+                <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+              </div>
+              {isPrivate && (
+                <>
+                  <Field label="活动室密码（分享给被邀请的人）">
+                    <Input
+                      value={roomPassword}
+                      onChange={(e) => setRoomPassword(e.target.value)}
+                      placeholder="例如：9527"
+                    />
+                  </Field>
+                  <p className="text-xs text-muted-foreground">
+                    私密活动在活动大厅只显示锁标识，需输入密码才能报名。发布后可在详情页复制定向邀请链接。
+                  </p>
+                </>
               )}
             </Card>
 

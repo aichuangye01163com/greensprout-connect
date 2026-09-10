@@ -193,6 +193,18 @@ export interface GSEvent {
   status: "open" | "ended";
   attendees: { name: string; avatar: string; note: string }[];
   messages: { name: string; avatar: string; text: string; time: string }[];
+  /** 私密活动室：需凭密码报名 */
+  isPrivate?: boolean;
+  /** 活动室密码（原型阶段仅本地校验） */
+  roomPassword?: string;
+  /** 定向邀请令牌，用于生成邀请链接 */
+  inviteToken?: string;
+}
+
+/** 生成定向邀请令牌（无第三方依赖） */
+export function makeInviteToken(seed = "") {
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `${seed.slice(0, 4) || "gs"}${rand}`;
 }
 
 /* ---------------- 时间工具 ---------------- */
@@ -532,6 +544,42 @@ export const EVENTS: GSEvent[] = [
       { name: "Ray", avatar: "⛅", note: "只玩阿瓦隆" },
     ],
     messages: [],
+  },
+  {
+    id: "e9",
+    title: "私密活动室 · 老友慢食晚餐（凭密码入场）",
+    category: "dinner",
+    cover: coverDinner,
+    startsAt: at(4, 18, 30),
+    endsAt: at(4, 21, 0),
+    location: "武康路 · 巷口小馆（报名后告知门牌）",
+    district: "徐汇",
+    limit: 6,
+    joined: 2,
+    tags: ["私密活动室", "定向邀请", "AA制"],
+    fee: 150,
+    deposit: 50,
+    host: hosts.chen,
+    agenda: mkAgenda(["到店落座", "慢食与闲聊", "散步回家"], 18),
+    eligibility: {
+      ageRange: [26, 42],
+      gender: "不限",
+      education: "不限",
+      income: "不限",
+      note: "仅接受收到邀请链接的朋友",
+    },
+    description: "这是一场只对收到邀请的人开放的小桌。输入活动室密码即可报名并进入临时群。",
+    status: "open",
+    isPrivate: true,
+    roomPassword: "9527",
+    inviteToken: "wkl9527",
+    attendees: [
+      { name: "陈知遥", avatar: "☁️", note: "组织者" },
+      { name: "禾一", avatar: "🌾", note: "被邀请入场" },
+    ],
+    messages: [
+      { name: "陈知遥", avatar: "☁️", text: "密码只发给了名单上的朋友，请勿外传。", time: "今天 08:30" },
+    ],
   },
 ];
 

@@ -1,11 +1,12 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ChevronLeft, MapPin, Clock, Users, ShieldCheck, Send, Lock } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, MapPin, Clock, Users, ShieldCheck, Send, Lock, KeyRound } from "lucide-react";
 import { AppShell } from "@/components/gs/AppShell";
 import { Tag } from "@/components/gs/Chip";
 import { Countdown } from "@/components/gs/Countdown";
+import { InviteCard } from "@/components/gs/InviteCard";
 import { useGS } from "@/lib/gs-store";
-import { canCancel, CANCEL_LOCK_HOURS } from "@/services/activities";
+import { canCancel, CANCEL_LOCK_HOURS, verifyRoomPassword } from "@/services/activities";
 import { getChatRoom, sendMessage, DISSOLVE_HOURS_AFTER_END, type ChatRoom } from "@/services/chat";
 import { CATEGORY_MAP, fmtDate, fmtTime } from "@/data/greensprout";
 import {
@@ -17,9 +18,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/event/$id")({
+  validateSearch: (search: Record<string, unknown>): { invite?: string } =>
+    typeof search['invite'] === "string" ? { invite: search['invite'] } : {},
   head: () => ({
     meta: [
       { title: "活动详情 · 绿芽局 GreenSprout" },
@@ -33,19 +37,25 @@ export const Route = createFileRoute("/event/$id")({
 
 function EventDetail() {
   const { id } = Route.useParams();
+  const { invite } = Route.useSearch();
   const router = useRouter();
   const { events, isJoined, join, cancel, profile, loading } = useGS();
   const event = events.find((e) => e.id === id);
 
   const [confirmJoin, setConfirmJoin] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [askPassword, setAskPassword] = useState(false);
+  const [password, setPassword] = useState("");
+  const [pwError, setPwError] = useState("");
   const [room, setRoom] = useState<ChatRoom | null>(null);
   const [draft, setDraft] = useState("");
+  const chatRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!event) return;
     void getChatRoom(event.id).then(setRoom);
   }, [event?.id, event?.joined]);
+
 
   if (loading) {
     return (
@@ -73,11 +83,40 @@ function EventDetail() {
   const full = event.joined >= event.limit;
   const ended = event.status === "ended";
   const cancellable = canCancel(event);
+  const isPrivate = event.isPrivate === true;
+  const isHost = !!profile && profile.nickname === event.host.name;
+  const viaInvite = !!invite;
+
+  const enterChat = () => {
+    window.setTimeout(() => chatRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
+  };
 
   const doJoin = async () => {
     await join(event.id);
     setConfirmJoin(false);
-    toast.success("报名成功，临时群已解锁");
+    setAskPassword(false);
+    setPassword("");
+    setPwError("");
+    toast.success(isPrivate ? "密码正确，已进入活动室临时群" : "报名成功，临时群已解锁");
+    enterChat();
+  };
+
+  const startJoin = () => {
+    if (isPrivate) {
+      setPwError("");
+      setPassword("");
+      setAskPassword(true);
+    } else {
+      setConfirmJoin(true);
+    }
+  };
+
+  const submitPassword = async () => {
+    if (!verifyRoomPassword(event, password)) {
+      setPwError("密码不正确，请向邀请你的人确认");
+      return;
+    }
+    await doJoin();
   };
 
   const doCancel = async () => {
@@ -85,6 +124,7 @@ function EventDetail() {
     setConfirmCancel(false);
     toast("已取消报名");
   };
+
 
   const doSend = async () => {
     if (!draft.trim()) return;
@@ -112,6 +152,20 @@ function EventDetail() {
           <ChevronLeft className="size-4" />
           返回活动大厅
         </button>
+
+        {isPrivate && (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2 rounded-2xl border border-border bg-card p-4 text-sm">
+              <Lock className="mt-0.5 size-4 shrink-0 text-[color:var(--clay)]" />
+              <p className="min-w-0 text-muted-foreground">
+                {viaInvite ? "你通过定向邀请链接进入这场私密活动室。" : "这是一场私密活动室。"}
+                点击「报名加入」并输入活动室密码，即可报名并直接进入临时群。
+              </p>
+            </div>
+            {(isHost || joined) && <InviteCard event={event} />}
+          </div>
+        )}
+
 
         <div className="overflow-hidden rounded-2xl border border-border bg-card">
           <img
@@ -245,8 +299,13 @@ function EventDetail() {
           </div>
         </Section>
 
+        <div ref={chatRef} className="scroll-mt-4">
         <Section title="临时群聊">
-          {!room?.unlocked ? (
+          {isPrivate && !joined && !isHost ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Lock className="size-4" /> 私密活动室，输入密码报名后自动进入群聊
+            </p>
+          ) : !room?.unlocked ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="size-4" /> 有 1 人报名后自动解锁
             </p>
@@ -292,6 +351,7 @@ function EventDetail() {
             </div>
           )}
         </Section>
+        </div>
       </div>
 
       {/* 移动端固定底部操作条 */}
@@ -317,16 +377,51 @@ function EventDetail() {
               取消报名
             </Button>
           ) : (
-            <Button
-              disabled={full}
-              className="rounded-full px-8"
-              onClick={() => setConfirmJoin(true)}
-            >
-              {full ? "已满员" : "立即报名"}
+            <Button disabled={full} className="rounded-full px-8" onClick={startJoin}>
+              {full ? "已满员" : isPrivate ? "报名加入（需密码）" : "立即报名"}
             </Button>
           )}
         </div>
       </div>
+
+      <Dialog open={askPassword} onOpenChange={setAskPassword}>
+        <DialogContent className="max-w-sm rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-4" /> 输入活动室密码
+            </DialogTitle>
+            <DialogDescription>
+              这是一场私密活动室，请输入组织者发给你的密码。验证通过后将直接报名并进入临时群。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Input
+              value={password}
+              autoFocus
+              inputMode="text"
+              placeholder="活动室密码"
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPwError("");
+              }}
+              onKeyDown={(e) => e.key === "Enter" && void submitPassword()}
+            />
+            {pwError && <p className="text-xs text-destructive">{pwError}</p>}
+            <p className="text-xs text-muted-foreground">
+              · 费用 {event.fee === 0 ? "免费" : `¥${event.fee}`}
+              {event.deposit > 0 ? ` · 含 ¥${event.deposit} 不退定金` : ""} · 开始前{" "}
+              {CANCEL_LOCK_HOURS} 小时内不可取消
+            </p>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="ghost" onClick={() => setAskPassword(false)}>
+              取消
+            </Button>
+            <Button onClick={() => void submitPassword()}>验证并加入</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog open={confirmJoin} onOpenChange={setConfirmJoin}>
         <DialogContent className="max-w-sm rounded-2xl">
