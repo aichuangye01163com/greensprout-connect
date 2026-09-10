@@ -7,7 +7,7 @@ ensureMockRoutes();
 
 export type UserProfile = typeof DEFAULT_PROFILE;
 
-const PROFILE_STORAGE_PREFIX = "gs_";
+const LOGOUT_STORAGE_KEYS = ["gs_profile", "gs_joined_ids", "gs_events"] as const;
 
 export async function getProfile(): Promise<UserProfile> {
   return api.get<UserProfile>("/me");
@@ -31,12 +31,10 @@ export async function verifyEmail(code: string): Promise<UserProfile> {
 /** 清除本地用户资料 */
 export function clearProfile() {
   try {
-    Object.keys(localStorage)
-      .filter((key) => key.startsWith(PROFILE_STORAGE_PREFIX))
-      .forEach((key) => localStorage.removeItem(key));
-    Object.keys(sessionStorage)
-      .filter((key) => key.startsWith(PROFILE_STORAGE_PREFIX))
-      .forEach((key) => sessionStorage.removeItem(key));
+    LOGOUT_STORAGE_KEYS.forEach((key) => {
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    });
   } catch (e) {
     console.warn("Failed to clear user data from web storage", e);
   }
