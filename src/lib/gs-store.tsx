@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import type { GSEvent } from "@/data/greensprout";
 import * as activities from "@/services/activities";
 import * as userService from "@/services/user";
@@ -70,8 +78,8 @@ export function GSProvider({ children }: { children: ReactNode }) {
         setProfile(p);
       },
       logout: () => {
-        // 清除本地存储的用户数据
-        userService.clearProfile();
+        // 仅退出登录态（保留账号资料）
+        userService.logout();
         setProfile(null);
         setJoinedIds([]);
         // 刷新页面回到首页

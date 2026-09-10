@@ -55,16 +55,16 @@ function ProfilePage() {
   // 获取用户发起的活动（该用户是 host）
   const hostedEvents = useMemo(
     () => events.filter((e) => e.host.name === profile?.nickname && e.status === "open"),
-    [events, profile?.nickname]
+    [events, profile?.nickname],
   );
 
   // 获取用户参加的活动（已报名 + 非发起者 + 进行中）
   const joinedEvents = useMemo(
     () =>
       events.filter(
-        (e) => isJoined(e.id) && e.host.name !== profile?.nickname && e.status === "open"
+        (e) => isJoined(e.id) && e.host.name !== profile?.nickname && e.status === "open",
       ),
-    [events, profile?.nickname, isJoined]
+    [events, profile?.nickname, isJoined],
   );
 
   if (!draft) {
@@ -319,9 +319,7 @@ function ProfilePage() {
         <DialogContent className="max-w-sm rounded-2xl">
           <DialogHeader>
             <DialogTitle>确认退出登录？</DialogTitle>
-            <DialogDescription>
-              退出后将返回首页，下次访问需要重新注册。
-            </DialogDescription>
+            <DialogDescription>退出后将返回首页，下次访问可重新登录账号。</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-2">
             <Button variant="ghost" onClick={() => setLogoutConfirm(false)}>

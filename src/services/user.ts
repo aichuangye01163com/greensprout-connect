@@ -8,6 +8,7 @@ ensureMockRoutes();
 export type UserProfile = typeof DEFAULT_PROFILE;
 
 const PROFILE_STORAGE_KEY = "gs_profile";
+const SESSION_STORAGE_KEY = "gs_session_active";
 
 export async function getProfile(): Promise<UserProfile | null> {
   return api.get<UserProfile | null>("/me");
@@ -28,11 +29,14 @@ export async function verifyEmail(code: string): Promise<UserProfile> {
   return api.post<UserProfile>("/me/email/verify");
 }
 
-/** 清除本地用户资料 */
-export function clearProfile() {
+/** 退出当前登录态（保留账号资料） */
+export function logout() {
   try {
-    localStorage.removeItem(PROFILE_STORAGE_KEY);
+    localStorage.setItem(SESSION_STORAGE_KEY, "0");
   } catch (e) {
-    console.warn("Failed to clear profile from localStorage", e);
+    console.warn("Failed to clear session from localStorage", e);
   }
 }
+
+/** 兼容旧调用：仅退出登录态，不删除账户资料 */
+export const clearProfile = logout;

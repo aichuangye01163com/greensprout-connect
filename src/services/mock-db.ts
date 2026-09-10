@@ -9,6 +9,7 @@ import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 const STORAGE_KEY_EVENTS = "gs_events";
 const STORAGE_KEY_PROFILE = "gs_profile";
 const STORAGE_KEY_JOINED = "gs_joined_ids";
+const STORAGE_KEY_SESSION = "gs_session_active";
 
 // 初始化数据：从 localStorage 读取，如果不存在则使用默认值
 function initEvents(): GSEvent[] {
@@ -41,11 +42,24 @@ function initJoinedIds(): string[] {
   return [];
 }
 
+function initSessionActive(profile: typeof DEFAULT_PROFILE | null): boolean {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY_SESSION);
+    if (stored === "1") return true;
+    if (stored === "0") return false;
+  } catch (e) {
+    console.warn("Failed to load session from localStorage", e);
+  }
+  return profile !== null;
+}
+
 const db = {
   events: initEvents() as GSEvent[],
   profile: initProfile() as typeof DEFAULT_PROFILE | null,
   joinedIds: initJoinedIds() as string[],
+  sessionActive: false,
 };
+db.sessionActive = initSessionActive(db.profile);
 
 // 持久化到 localStorage 的辅助函数
 function saveEvents() {
@@ -61,6 +75,14 @@ function saveProfile() {
     localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(db.profile));
   } catch (e) {
     console.warn("Failed to save profile to localStorage", e);
+  }
+
+  function saveSession() {
+    try {
+      localStorage.setItem(STORAGE_KEY_SESSION, db.sessionActive ? "1" : "0");
+    } catch (e) {
+      console.warn("Failed to save session to localStorage", e);
+    }
   }
 }
 
@@ -97,8 +119,9 @@ export function ensureMockRoutes() {
   });
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/join$/, (req) => {
+    if (!db.sessionActive || !db.profile) throw new Error("请先登录后再报名");
     const id = idFrom(req.path, "/activities/");
-    const actor = db.profile ?? DEFAULT_PROFILE;
+    const actor = db.profile;
     db.events = db.events.map((e) =>
       e.id === id && e.joined < e.limit
         ? {
@@ -118,8 +141,9 @@ export function ensureMockRoutes() {
   });
 
   registerMockRoute("POST", /^\/activities\/[^/]+\/cancel$/, (req) => {
+    if (!db.sessionActive || !db.profile) throw new Error("请先登录后再取消报名");
     const id = idFrom(req.path, "/activities/");
-    const actor = db.profile ?? DEFAULT_PROFILE;
+    const actor = db.profile;
     db.events = db.events.map((e) =>
       e.id === id
         ? {
@@ -135,9 +159,9 @@ export function ensureMockRoutes() {
     return { joinedIds: db.joinedIds, event: db.events.find((e) => e.id === id) };
   });
 
-  registerMockRoute("GET", /^\/me\/joined$/, () => db.joinedIds);
+  registerMockRoute("GET", /^\/me\/joined$/, () => (db.sessionActive ? db.joinedIds : []));
 
-  registerMockRoute("GET", /^\/me$/, () => db.profile);
+  registerMockRoute("GET", /^\/me$/, () => (db.sessionActive ? db.profile : null));
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
     const patch = req.body as Record<string, unknown>;
@@ -147,15 +171,19 @@ export function ensureMockRoutes() {
       const email = typeof patch.email === "string" ? patch.email.trim() : "";
       if (!nickname || !email) throw new Error("请先完成注册资料");
       db.profile = { ...DEFAULT_PROFILE, ...patch, nickname, email };
+    } else if (!db.sessionActive) {
+      throw new Error("请先登录后再保存资料");
     } else {
       db.profile = { ...db.profile, ...patch };
     }
+    db.sessionActive = true;
     saveProfile(); // 💾 持久化
+    saveSession(); // 💾 持久化
     return db.profile;
   });
 
   registerMockRoute("POST", /^\/me\/email\/verify$/, () => {
-    if (!db.profile) throw new Error("请先注册后再进行邮箱验证");
+    if (!db.profile || !db.sessionActive) throw new Error("请先登录后再进行邮箱验证");
     db.profile = { ...db.profile, emailVerified: true };
     saveProfile(); // 💾 持久化
     return db.profile;
@@ -173,9 +201,10 @@ export function ensureMockRoutes() {
   });
 
   registerMockRoute("POST", /^\/chat\/[^/]+\/messages$/, (req) => {
+    if (!db.sessionActive || !db.profile) throw new Error("请先登录后再发言");
     const id = idFrom(req.path, "/chat/");
     const text = (req.body as { text: string }).text;
-    const actor = db.profile ?? DEFAULT_PROFILE;
+    const actor = db.profile;
     const msg = {
       name: actor.nickname,
       avatar: actor.avatar,
