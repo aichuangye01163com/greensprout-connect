@@ -61,6 +61,8 @@ function CreateEvent() {
   const [education, setEducation] = useState("不限");
   const [income, setIncome] = useState("不限");
   const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [roomPassword, setRoomPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const applyTemplate = (id: CategoryId) => {
