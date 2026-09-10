@@ -50,7 +50,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   登录
                 </Link>
                 <Link
-                  to="/profile"
+                  to="/register"
                   className="rounded-full border border-border bg-secondary px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-secondary/80"
                 >
                   注册
