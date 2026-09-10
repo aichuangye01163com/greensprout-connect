@@ -31,28 +31,6 @@ function initProfile() {
   return null;
 }
 
-function createProfileFromPatch(patch: Record<string, unknown>): typeof DEFAULT_PROFILE {
-  return {
-    nickname: typeof patch.nickname === "string" ? patch.nickname : "",
-    email: typeof patch.email === "string" ? patch.email : "",
-    emailVerified: typeof patch.emailVerified === "boolean" ? patch.emailVerified : false,
-    gender: typeof patch.gender === "string" ? patch.gender : "",
-    age: typeof patch.age === "number" ? patch.age : 0,
-    avatar: typeof patch.avatar === "string" ? patch.avatar : "🌱",
-    city: typeof patch.city === "string" ? patch.city : "",
-    education: typeof patch.education === "string" ? patch.education : "",
-    university: typeof patch.university === "string" ? patch.university : "",
-    career: typeof patch.career === "string" ? patch.career : "",
-    income: typeof patch.income === "string" ? patch.income : "",
-    hobbies: Array.isArray(patch.hobbies)
-      ? patch.hobbies.filter((x): x is string => typeof x === "string")
-      : [],
-    landmines: typeof patch.landmines === "string" ? patch.landmines : "",
-    showLiked: typeof patch.showLiked === "boolean" ? patch.showLiked : true,
-    showHosted: typeof patch.showHosted === "boolean" ? patch.showHosted : true,
-  };
-}
-
 function initJoinedIds(): string[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY_JOINED);
@@ -165,7 +143,10 @@ export function ensureMockRoutes() {
     const patch = req.body as Record<string, unknown>;
     if (!db.profile) {
       if (!patch || Object.keys(patch).length === 0) throw new Error("请先注册后再保存资料");
-      db.profile = createProfileFromPatch(patch);
+      const nickname = typeof patch.nickname === "string" ? patch.nickname.trim() : "";
+      const email = typeof patch.email === "string" ? patch.email.trim() : "";
+      if (!nickname || !email) throw new Error("请先完成注册资料");
+      db.profile = { ...DEFAULT_PROFILE, ...patch, nickname, email };
     } else {
       db.profile = { ...db.profile, ...patch };
     }
