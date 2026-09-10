@@ -149,7 +149,10 @@ export function ensureMockRoutes() {
 
   registerMockRoute("GET", /^\/me\/joined$/, () => (hasLoggedOutSession() ? [] : db.joinedIds));
 
-  registerMockRoute("GET", /^\/me$/, () => db.profile);
+  registerMockRoute("GET", /^\/me$/, () => {
+    if (hasLoggedOutSession()) throw new Error("未登录");
+    return db.profile;
+  });
 
   registerMockRoute("PATCH", /^\/me$/, (req) => {
     if (hasLoggedOutSession()) throw new Error("未登录");

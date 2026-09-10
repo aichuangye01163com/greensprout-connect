@@ -322,8 +322,8 @@ function ProfilePage() {
           保存资料
         </Button>
         <Button
-          variant="outline"
-          className="w-full rounded-xl text-destructive hover:text-destructive"
+          variant="destructive"
+          className="w-full rounded-xl"
           onClick={() => setLogoutConfirm(true)}
         >
           <LogOut className="size-4" />

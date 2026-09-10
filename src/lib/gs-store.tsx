@@ -39,21 +39,32 @@ export function GSProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     const sessionVersion = sessionVersionRef.current;
     const loggedOut = userService.isLoggedOut();
-    const [e, j, p] = await Promise.all([
-      activities.listActivities(),
-      activities.listJoinedIds(),
-      loggedOut ? Promise.resolve(null) : userService.getProfile(),
-    ]);
-    if (sessionVersion !== sessionVersionRef.current) return;
-    setEvents(e);
-    if (userService.isLoggedOut()) {
-      setJoinedIds([]);
-      setProfile(null);
-    } else {
-      setJoinedIds(j);
-      setProfile(p);
+    try {
+      const [e, j, p] = await Promise.all([
+        activities.listActivities(),
+        activities.listJoinedIds(),
+        loggedOut ? Promise.resolve(null) : userService.getProfile(),
+      ]);
+      if (sessionVersion !== sessionVersionRef.current) return;
+      setEvents(e);
+      if (userService.isLoggedOut()) {
+        setJoinedIds([]);
+        setProfile(null);
+      } else {
+        setJoinedIds(j);
+        setProfile(p);
+      }
+      setLoading(false);
+    } catch (error) {
+      if (sessionVersion !== sessionVersionRef.current) return;
+      if (userService.isLoggedOut()) {
+        setJoinedIds([]);
+        setProfile(null);
+      } else {
+        console.error("Failed to refresh GS store", error);
+      }
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
