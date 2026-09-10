@@ -6,25 +6,47 @@ import type { DEFAULT_PROFILE } from "@/data/greensprout";
 ensureMockRoutes();
 
 export type UserProfile = typeof DEFAULT_PROFILE;
+
 export interface RegisterInput {
   nickname: string;
   email: string;
   phone?: string;
   password: string;
 }
+
 export interface LoginInput {
   account: string;
   password: string;
 }
+
+export type UserArchiveFieldType = "text" | "number" | "boolean" | "date" | "email" | "phone";
+
+export interface UserArchiveFieldDefinition {
+  key: string;
+  label: string;
+  type: UserArchiveFieldType;
+  required: boolean;
+  enabled: boolean;
+  sort: number;
+  placeholder?: string;
+}
+
 export type UserArchiveFieldValue = string | number | boolean | null;
+
 export interface UserArchive {
   profile: UserProfile;
   customFields: Record<string, UserArchiveFieldValue>;
+  fieldDefinitions: UserArchiveFieldDefinition[];
   updatedAt: string;
 }
+
 export interface UpdateUserArchiveInput {
   set?: Record<string, UserArchiveFieldValue>;
   remove?: string[];
+}
+
+export interface UpsertArchiveFieldDefinitionInput extends Partial<UserArchiveFieldDefinition> {
+  key: string;
 }
 
 const PROFILE_STORAGE_KEY = "gs_profile";
@@ -53,6 +75,22 @@ export async function getUserArchive(): Promise<UserArchive> {
 
 export async function updateUserArchive(input: UpdateUserArchiveInput): Promise<UserArchive> {
   return api.patch<UserArchive>("/me/archive", input);
+}
+
+export async function getArchiveFieldDefinitions(): Promise<UserArchiveFieldDefinition[]> {
+  return api.get<UserArchiveFieldDefinition[]>("/me/archive/fields");
+}
+
+export async function upsertArchiveFieldDefinition(
+  input: UpsertArchiveFieldDefinitionInput,
+): Promise<UserArchiveFieldDefinition[]> {
+  return api.patch<UserArchiveFieldDefinition[]>("/me/archive/fields", input);
+}
+
+export async function removeArchiveFieldDefinition(
+  key: string,
+): Promise<UserArchiveFieldDefinition[]> {
+  return api.delete<UserArchiveFieldDefinition[]>("/me/archive/fields", { key });
 }
 
 /** 邮箱验证（原型为模拟流程） */
