@@ -126,11 +126,11 @@ function ProfilePage() {
     toast.success("资料已保存");
   };
 
-  const onLogout = async () => {
-    logout();
+  const onLogout = () => {
     setLogoutConfirm(false);
     toast.success("已退出登录");
-    await navigate({ to: "/" });
+    void navigate({ to: "/" });
+    logout();
   };
 
   return (
