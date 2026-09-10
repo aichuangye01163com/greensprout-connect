@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ApiError } from "@/services/api-client";
 import { useGS } from "@/lib/gs-store";
+import * as auth from "@/services/auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -15,26 +15,27 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { profile, login } = useGS();
-  const [account, setAccount] = useState("");
+  const { profile, setAuthSession } = useGS();
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const onSubmit = async () => {
-    if (!account.trim() || !password.trim()) {
-      toast.error("请填写邮箱或手机号，以及密码");
+    if (!email.trim() || !password) {
+      toast.error("请填写邮箱和密码");
       return;
     }
     setSubmitting(true);
     try {
-      await login({
-        account: account.trim(),
-        password: password.trim(),
+      const session = await auth.signIn({
+        email: email.trim(),
+        password,
       });
+      setAuthSession(session);
       toast.success("登录成功");
       void navigate({ to: "/" });
     } catch (e) {
-      toast.error(e instanceof ApiError ? e.message : "登录失败，请稍后重试");
+      toast.error(e instanceof Error ? e.message : "登录失败，请稍后重试");
     } finally {
       setSubmitting(false);
     }
@@ -58,24 +59,26 @@ function LoginPage() {
       <section className="mx-auto max-w-md space-y-4 rounded-2xl border border-border bg-card p-5">
         <header className="space-y-1">
           <h1 className="text-xl tracking-tight">登录</h1>
-          <p className="text-sm text-muted-foreground">支持邮箱或手机号登录。</p>
+          <p className="text-sm text-muted-foreground">使用邮箱和密码登录绿芽局。</p>
         </header>
 
         <Alert className="border-border/70 bg-background/70">
           <AlertDescription className="text-muted-foreground">
-            请输入“邮箱或手机号”与密码进行登录。后续可无缝对接小程序/APP登录适配器。
+            使用 Supabase Authentication，密码由 Supabase 安全托管，前端不保存密码。
           </AlertDescription>
         </Alert>
 
         <div className="space-y-1.5">
-          <Label htmlFor="login-account" className="text-xs text-muted-foreground">
-            邮箱或手机号
+          <Label htmlFor="login-email" className="text-xs text-muted-foreground">
+            邮箱
           </Label>
           <Input
-            id="login-account"
-            value={account}
-            onChange={(e) => setAccount(e.target.value)}
-            placeholder="you@example.com 或 13800000000"
+            id="login-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
           />
         </div>
 
@@ -86,10 +89,21 @@ function LoginPage() {
           <Input
             id="login-password"
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="请输入密码"
+            onKeyDown={(e) => e.key === "Enter" && void onSubmit()}
           />
+        </div>
+
+        <div className="flex justify-end">
+          <Link
+            to="/forgot-password"
+            className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            忘记密码？
+          </Link>
         </div>
 
         <Button className="w-full rounded-xl" disabled={submitting} onClick={() => void onSubmit()}>
