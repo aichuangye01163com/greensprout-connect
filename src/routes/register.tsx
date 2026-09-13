@@ -40,7 +40,7 @@ function RegisterPage() {
       const { needsEmailConfirmation } = await auth.signUp({
         email: email.trim(),
         password,
-        nickname: nickname.trim() || undefined,
+        ...(nickname.trim() ? { nickname: nickname.trim() } : {}),
       });
 
       if (needsEmailConfirmation) {

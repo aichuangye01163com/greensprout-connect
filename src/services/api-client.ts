@@ -96,9 +96,9 @@ export async function request<T>(req: ApiRequest): Promise<T> {
 
 export const api = {
   get: <T>(path: string, query?: Record<string, string | number | boolean | undefined>) =>
-    request<T>({ method: "GET", path, query }),
+    request<T>({ method: "GET", path, ...(query ? { query } : {}) }),
   post: <T>(path: string, body?: unknown) => request<T>({ method: "POST", path, body }),
   patch: <T>(path: string, body?: unknown) => request<T>({ method: "PATCH", path, body }),
   delete: <T>(path: string, query?: Record<string, string | number | boolean | undefined>) =>
-    request<T>({ method: "DELETE", path, query }),
+    request<T>({ method: "DELETE", path, ...(query ? { query } : {}) }),
 };
