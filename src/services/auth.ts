@@ -62,6 +62,9 @@ export async function signUp(params: {
 }): Promise<{ needsEmailConfirmation: boolean }> {
   const { email, password, nickname } = params;
 
+  const emailRedirectTo =
+    typeof window !== "undefined" ? `${window.location.origin}/login` : undefined;
+
   const { data, error } = await supabase.auth.signUp({
     email: email.trim(),
     password,
@@ -70,7 +73,7 @@ export async function signUp(params: {
         nickname: nickname?.trim() || email.split("@")[0],
         avatar_url: "🌱",
       },
-      emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/login` : undefined,
+      ...(emailRedirectTo ? { emailRedirectTo } : {}),
     },
   });
 
@@ -81,8 +84,8 @@ export async function signUp(params: {
     const { error: profileError } = await supabase.from("profiles").upsert(
       {
         id: data.user.id,
-        email: data.user.email,
-        nickname: nickname?.trim() || email.split("@")[0],
+        email: data.user.email ?? null,
+        nickname: nickname?.trim() || email.split("@")[0] || null,
         avatar_url: "🌱",
       },
       { onConflict: "id" },
@@ -125,9 +128,10 @@ export async function requestPasswordReset(email: string): Promise<void> {
   const redirectTo =
     typeof window !== "undefined" ? `${window.location.origin}/reset-password` : undefined;
 
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo,
-  });
+  const { error } = await supabase.auth.resetPasswordForEmail(
+    email.trim(),
+    redirectTo ? { redirectTo } : {},
+  );
   if (error) throw new Error(error.message);
 }
 

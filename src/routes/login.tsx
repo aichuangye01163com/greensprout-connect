@@ -64,7 +64,7 @@ function LoginPage() {
 
         <Alert className="border-border/70 bg-background/70">
           <AlertDescription className="text-muted-foreground">
-            使用 Supabase Authentication，密码由 Supabase 安全托管，前端不保存密码。
+            密码由云端安全托管，绿芽局不会保存你的明文密码。
           </AlertDescription>
         </Alert>
 

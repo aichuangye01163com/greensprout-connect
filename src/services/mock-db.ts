@@ -1,4 +1,4 @@
-import { DEFAULT_EVENTS, DEFAULT_PROFILE, type EventItem } from "@/data/greensprout";
+import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 import { ApiError, registerMockRoute, type ApiRequest } from "./api-client";
 
 type UserProfile = typeof DEFAULT_PROFILE;
@@ -29,7 +29,7 @@ type MockAccount = {
 };
 
 type MockDB = {
-  events: EventItem[];
+  events: GSEvent[];
   profile: UserProfile | null;
   joinedIds: string[];
   accounts: MockAccount[];
@@ -80,7 +80,7 @@ function normalizePhone(input: string) {
 }
 
 function accountPhone(account: MockAccount): string {
-  const v = account.archive.customFields?.phone;
+  const v = account.archive.customFields?.["phone"];
   return typeof v === "string" ? normalizePhone(v) : "";
 }
 
@@ -142,14 +142,14 @@ function saveAll() {
 }
 
 function loadAll() {
-  db.events = getJson<EventItem[]>(STORAGE_KEYS.events, DEFAULT_EVENTS);
+  db.events = getJson<GSEvent[]>(STORAGE_KEYS.events, EVENTS);
   db.accounts = getJson<MockAccount[]>(STORAGE_KEYS.accounts, [demoAccount]);
   db.currentAccountEmail = getJson<string | null>(STORAGE_KEYS.currentAccountEmail, null);
   db.profile = getJson<UserProfile | null>(STORAGE_KEYS.profile, null);
   db.joinedIds = getJson<string[]>(STORAGE_KEYS.joinedIds, []);
 
   if (!db.accounts.length) db.accounts = [demoAccount];
-  if (!db.events.length) db.events = DEFAULT_EVENTS;
+  if (!db.events.length) db.events = EVENTS;
 
   // 兼容老数据（没有 fieldDefinitions 的情况）
   db.accounts = db.accounts.map((a) => ({
@@ -261,7 +261,7 @@ export function ensureMockRoutes() {
     };
 
     const archive = makeArchive(profile);
-    if (phone) archive.customFields.phone = phone;
+    if (phone) archive.customFields["phone"] = phone;
 
     const account: MockAccount = {
       email,
@@ -363,14 +363,16 @@ export function ensureMockRoutes() {
     const defs = account.archive.fieldDefinitions ?? [];
     const idx = defs.findIndex((d) => d.key === key);
 
+    const existing = idx >= 0 ? defs[idx] : undefined;
+    const placeholder = body.placeholder ?? existing?.placeholder;
     const merged: UserArchiveFieldDefinition = {
       key,
-      label: body.label?.trim() || (idx >= 0 ? defs[idx].label : key),
-      type: body.type ?? (idx >= 0 ? defs[idx].type : "text"),
-      required: body.required ?? (idx >= 0 ? defs[idx].required : false),
-      enabled: body.enabled ?? (idx >= 0 ? defs[idx].enabled : true),
-      sort: body.sort ?? (idx >= 0 ? defs[idx].sort : defs.length * 10 + 10),
-      placeholder: body.placeholder ?? (idx >= 0 ? defs[idx].placeholder : undefined),
+      label: body.label?.trim() || existing?.label || key,
+      type: body.type ?? existing?.type ?? "text",
+      required: body.required ?? existing?.required ?? false,
+      enabled: body.enabled ?? existing?.enabled ?? true,
+      sort: body.sort ?? existing?.sort ?? defs.length * 10 + 10,
+      ...(placeholder !== undefined ? { placeholder } : {}),
     };
 
     if (idx >= 0) defs[idx] = merged;
