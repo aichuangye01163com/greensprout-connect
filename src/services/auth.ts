@@ -84,8 +84,8 @@ export async function signUp(params: {
     const { error: profileError } = await supabase.from("profiles").upsert(
       {
         id: data.user.id,
-        email: data.user.email,
-        nickname: nickname?.trim() || email.split("@")[0],
+        email: data.user.email ?? null,
+        nickname: nickname?.trim() || email.split("@")[0] || null,
         avatar_url: "🌱",
       },
       { onConflict: "id" },
