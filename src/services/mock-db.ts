@@ -1,4 +1,4 @@
-import { DEFAULT_EVENTS, DEFAULT_PROFILE, type EventItem } from "@/data/greensprout";
+import { EVENTS, DEFAULT_PROFILE, type GSEvent } from "@/data/greensprout";
 import { ApiError, registerMockRoute, type ApiRequest } from "./api-client";
 
 type UserProfile = typeof DEFAULT_PROFILE;
@@ -80,7 +80,7 @@ function normalizePhone(input: string) {
 }
 
 function accountPhone(account: MockAccount): string {
-  const v = account.archive.customFields?.phone;
+  const v = account.archive.customFields?.["phone"];
   return typeof v === "string" ? normalizePhone(v) : "";
 }
 
