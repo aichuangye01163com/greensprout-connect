@@ -1,4 +1,5 @@
-import type { GSEvent } from "@/data/greensprout";
+import type { GSEvent, CategoryId } from "@/data/greensprout";
+import { CATEGORIES } from "@/data/greensprout";
 import type { Database } from "@/integrations/supabase/types";
 
 
@@ -13,55 +14,61 @@ type ProfileRow =
 
 
 /**
- * Supabase 分类 slug
- * 转换为前端 GSEvent 使用的 CategoryId
+ * Supabase 分类 slug → 前端 CategoryId
+ * 防止数据库分类变化导致页面崩溃
  */
-function mapCategory(slug: string): GSEvent["category"] {
+function normalizeCategory(
+  slug?: string | null
+): CategoryId {
 
-  const map: Record<string, GSEvent["category"]> = {
+  switch (slug) {
 
-    // 跑步
-    run: "run",
-    running: "run",
-    jogging: "run",
+    case "run":
+    case "running":
+    case "跑步":
+      return "run";
 
-    // 羽毛球
-    badminton: "badminton",
+    case "badminton":
+    case "羽毛球":
+      return "badminton";
 
-    // 咖啡
-    coffee: "coffee",
-    cafe: "coffee",
+    case "coffee":
+    case "咖啡":
+      return "coffee";
 
-    // 晚餐 / 美食
-    dinner: "dinner",
-    food: "dinner",
-    meal: "dinner",
+    case "dinner":
+    case "food":
+    case "晚餐":
+      return "dinner";
 
-    // 音乐
-    concert: "concert",
-    music: "concert",
+    case "concert":
+    case "music":
+      return "concert";
 
-    // 女性活动
-    women: "women",
-    female: "women",
+    case "women":
+    case "female":
+      return "women";
 
-    // 桌游
-    boardgame: "boardgame",
-    board_game: "boardgame",
+    case "boardgame":
+    case "game":
+      return "boardgame";
 
-    // 徒步
-    hiking: "hiking",
-    hike: "hiking",
-    outdoor: "hiking",
-  };
+    case "hiking":
+    case "outdoor":
+      return "hiking";
 
-
-  return map[slug] ?? "coffee";
+    default:
+      /**
+       * 如果后台新增分类，
+       * 不允许前端白屏
+       */
+      return "coffee";
+  }
 }
 
 
 /**
- * Supabase activities 表
+ * Supabase activities
  * 转换为前端 GSEvent
  */
 export function mapActivityToEvent(
@@ -71,6 +78,12 @@ export function mapActivityToEvent(
   }
 ): GSEvent {
 
+
+  const category = normalizeCategory(
+    activity.activity_categories?.slug
+  );
+
+
   return {
 
     id: activity.id,
@@ -79,13 +92,15 @@ export function mapActivityToEvent(
     title: activity.title,
 
 
-    category: mapCategory(
-      activity.activity_categories?.slug ?? ""
-    ),
+    category,
 
 
     cover:
-      activity.cover ?? "",
+      activity.cover ??
+      CATEGORIES.find(
+        c => c.id === category
+      )?.cover ??
+      "",
 
 
     startsAt:
@@ -104,25 +119,20 @@ export function mapActivityToEvent(
       activity.district ?? "",
 
 
-
     limit:
       activity.participant_limit,
-
 
 
     joined:
       0,
 
 
-
     fee:
       Number(activity.fee ?? 0),
 
 
-
     deposit:
       Number(activity.deposit ?? 0),
-
 
 
     agenda:
@@ -131,9 +141,14 @@ export function mapActivityToEvent(
         : [],
 
 
-
     eligibility:
-      activity.eligibility as GSEvent["eligibility"],
+      (activity.eligibility ??
+        {
+          ageRange:[18,60],
+          gender:"不限",
+          education:"不限",
+          income:"不限"
+        }) as GSEvent["eligibility"],
 
 
 
@@ -151,7 +166,12 @@ export function mapActivityToEvent(
 
       avatar:
         activity.profiles?.avatar_url ??
-        "",
+        "🌱",
+
+      city:"",
+      hosted:0,
+      rating:5,
+      bio:"",
 
     },
 
@@ -170,7 +190,7 @@ export function mapActivityToEvent(
 
 
     status:
-      activity.status === "ended"
+      activity.status === "cancelled"
         ? "ended"
         : "open",
 
@@ -184,7 +204,7 @@ export function mapActivityToEvent(
     ...(activity.invite_token
       ? {
           inviteToken:
-            activity.invite_token,
+            activity.invite_token
         }
       : {}),
 
@@ -193,7 +213,7 @@ export function mapActivityToEvent(
     ...(activity.room_password
       ? {
           roomPassword:
-            activity.room_password,
+            activity.room_password
         }
       : {}),
 
