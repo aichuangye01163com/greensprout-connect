@@ -1,7 +1,7 @@
 /** 活动领域服务：UI 只依赖这些异步接口 */
 
 import { supabase } from "@/integrations/supabase/client";
-import { mapActivityToEvent } from "./mapper";
+import { mapActivityToEvent } from "./activity-mapper";
 
 import {
   CATEGORY_MAP,
