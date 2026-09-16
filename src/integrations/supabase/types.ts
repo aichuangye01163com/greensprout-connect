@@ -14,6 +14,149 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          agenda: Json
+          category_id: string
+          cover: string | null
+          created_at: string
+          deposit: number
+          description: string | null
+          district: string | null
+          eligibility: Json | null
+          ends_at: string
+          fee: number
+          host_id: string
+          id: string
+          invite_token: string | null
+          is_private: boolean
+          location: string
+          participant_limit: number
+          room_password: string | null
+          starts_at: string
+          status: string
+          title: string
+        }
+        Insert: {
+          agenda?: Json
+          category_id: string
+          cover?: string | null
+          created_at?: string
+          deposit?: number
+          description?: string | null
+          district?: string | null
+          eligibility?: Json | null
+          ends_at: string
+          fee?: number
+          host_id: string
+          id?: string
+          invite_token?: string | null
+          is_private?: boolean
+          location: string
+          participant_limit?: number
+          room_password?: string | null
+          starts_at: string
+          status?: string
+          title: string
+        }
+        Update: {
+          agenda?: Json
+          category_id?: string
+          cover?: string | null
+          created_at?: string
+          deposit?: number
+          description?: string | null
+          district?: string | null
+          eligibility?: Json | null
+          ends_at?: string
+          fee?: number
+          host_id?: string
+          id?: string
+          invite_token?: string | null
+          is_private?: boolean
+          location?: string
+          participant_limit?: number
+          room_password?: string | null
+          starts_at?: string
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "activity_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activities_host_id_profiles_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      activity_members: {
+        Row: {
+          activity_id: string
+          cancelled_at: string | null
+          created_at: string
+          id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          cancelled_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_members_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

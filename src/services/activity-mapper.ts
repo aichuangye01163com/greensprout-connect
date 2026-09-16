@@ -73,8 +73,8 @@ function normalizeCategory(
  */
 export function mapActivityToEvent(
   activity: ActivityRow & {
-    activity_categories?: CategoryRow | null;
-    profiles?: ProfileRow | null;
+    activity_categories?: Pick<CategoryRow, "id" | "name" | "slug"> | null;
+    profiles?: Pick<ProfileRow, "id" | "nickname" | "avatar_url"> | null;
   }
 ): GSEvent {
 
@@ -148,7 +148,7 @@ export function mapActivityToEvent(
           gender:"不限",
           education:"不限",
           income:"不限"
-        }) as GSEvent["eligibility"],
+        }) as unknown as GSEvent["eligibility"],
 
 
 
