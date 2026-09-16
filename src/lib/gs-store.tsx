@@ -96,12 +96,12 @@ export function GSProvider({ children }: { children: ReactNode }) {
       join: async (id) => {
         const res = await activities.joinActivity(id);
         setJoinedIds(res.joinedIds);
-        setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
+        setEvents((prev) => prev.map((e) => (e.id === id && res.event ? res.event : e)));
       },
       cancel: async (id) => {
         const res = await activities.cancelActivity(id);
         setJoinedIds(res.joinedIds);
-        setEvents((prev) => prev.map((e) => (e.id === id ? res.event : e)));
+        setEvents((prev) => prev.map((e) => (e.id === id && res.event ? res.event : e)));
       },
       createEvent: async (input) => {
         const created = await activities.createActivity(input);
