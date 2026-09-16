@@ -89,6 +89,13 @@ export type Database = {
             referencedRelation: "activity_categories"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "activities_host_id_profiles_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       activity_categories: {
