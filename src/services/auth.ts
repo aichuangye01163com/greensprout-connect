@@ -1,8 +1,10 @@
 ```ts
 /**
  * 完整用户认证系统 —— 使用 Supabase Auth
+ *
  * 密码由 Supabase 管理，前端不存储密码
  */
+
 import { supabase, type Profile } from "@/lib/supabase";
 import type { User } from "@supabase/supabase-js";
 
@@ -85,21 +87,23 @@ export async function signUp(params: {
 
   if (error) throw new Error(error.message);
 
+  // 客户端兜底：如果触发器未及时写入，手动插入一次
   if (data.user) {
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .upsert(
-        {
-          id: data.user.id,
-          email: data.user.email ?? null,
-          nickname: nickname?.trim() || email.split("@")[0] || null,
-          avatar_url: "🌱",
-        },
-        { onConflict: "id" },
-      );
+    const { error: profileError } = await supabase.from("profiles").upsert(
+      {
+        id: data.user.id,
+        email: data.user.email ?? null,
+        nickname: nickname?.trim() || email.split("@")[0] || null,
+        avatar_url: "🌱",
+      },
+      { onConflict: "id" },
+    );
 
     if (profileError) {
-      console.warn("[auth] profile upsert fallback", profileError.message);
+      console.warn(
+        "[auth] profile upsert fallback",
+        profileError.message,
+      );
     }
   }
 
@@ -119,7 +123,6 @@ export async function signIn(params: {
   });
 
   if (error) throw new Error(error.message);
-
   if (!data.user) throw new Error("登录失败");
 
   const profile = await getProfile(data.user.id);
@@ -152,7 +155,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** 重置密码 */
+/** 用户点击重置邮件后，更新密码 */
 export async function updatePassword(newPassword: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({
     password: newPassword,
@@ -162,10 +165,14 @@ export async function updatePassword(newPassword: string): Promise<void> {
 }
 
 /**
- * 监听 Auth 状态变化
+ * 监听 auth 状态变化
  *
- * 保持原有 callback(session) 接口，避免影响项目其他调用方。
- * 不在 Supabase Auth 回调内部直接执行 getProfile()。
+ * 保持项目原有的 callback(session) 接口，
+ * 避免影响其他页面。
+ *
+ * 注意：
+ * 不在 Supabase 的 auth 回调内部直接执行异步 profile 查询，
+ * 而是在当前调用栈结束后再查询。
  */
 export function onAuthStateChange(
   callback: (session: AuthSession | null) => void,
@@ -178,15 +185,13 @@ export function onAuthStateChange(
       return;
     }
 
-    const mappedSession: AuthSession = {
+    // 先立即通知已有 session
+    callback({
       user: mapUser(session.user),
       profile: null,
-    };
+    });
 
-    // 先立即通知登录状态已经建立
-    callback(mappedSession);
-
-    // 等 Auth 回调结束后，再查询 profile
+    // 避免在 Supabase auth callback 内直接进行异步 Supabase 查询
     setTimeout(() => {
       void getProfile(session.user.id).then((profile) => {
         callback({
