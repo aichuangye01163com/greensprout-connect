@@ -58,7 +58,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   return data;
 }
 
-/** 注册：邮箱 + 密码，发送验证邮件；成功后自动创建 profile（触发器 + 客户端兜底） */
+/** 注册 */
 export async function signUp(params: {
   email: string;
   password: string;
@@ -85,7 +85,6 @@ export async function signUp(params: {
 
   if (error) throw new Error(error.message);
 
-  // 客户端兜底：如果触发器未及时写入，手动插入一次
   if (data.user) {
     const { error: profileError } = await supabase
       .from("profiles")
@@ -104,7 +103,6 @@ export async function signUp(params: {
     }
   }
 
-  // 如果项目开启了邮箱确认，session 可能为空
   const needsEmailConfirmation = !data.session;
 
   return { needsEmailConfirmation };
@@ -154,7 +152,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** 重置密码（用户点击邮件链接后到达 /reset-password 页面调用） */
+/** 重置密码 */
 export async function updatePassword(newPassword: string): Promise<void> {
   const { error } = await supabase.auth.updateUser({
     password: newPassword,
@@ -164,12 +162,10 @@ export async function updatePassword(newPassword: string): Promise<void> {
 }
 
 /**
- * 监听 auth 状态变化
+ * 监听 Auth 状态变化
  *
- * 注意：
- * 不在 Supabase auth 回调内部直接执行数据库查询。
- * Supabase Auth 的状态回调需要尽快返回，否则可能影响
- * PASSWORD_RECOVERY 等认证事件的正常处理。
+ * 保持原有 callback(session) 接口，避免影响项目其他调用方。
+ * 不在 Supabase Auth 回调内部直接执行 getProfile()。
  */
 export function onAuthStateChange(
   callback: (session: AuthSession | null) => void,
@@ -182,15 +178,15 @@ export function onAuthStateChange(
       return;
     }
 
-    const authSession: AuthSession = {
+    const mappedSession: AuthSession = {
       user: mapUser(session.user),
       profile: null,
     };
 
-    // 先同步通知认证状态已经建立。
-    callback(authSession);
+    // 先立即通知登录状态已经建立
+    callback(mappedSession);
 
-    // profile 查询放到 Auth 回调返回之后执行。
+    // 等 Auth 回调结束后，再查询 profile
     setTimeout(() => {
       void getProfile(session.user.id).then((profile) => {
         callback({
