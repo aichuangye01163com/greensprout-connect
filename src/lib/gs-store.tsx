@@ -78,9 +78,17 @@ export function GSProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
     // 监听 Supabase auth 状态（刷新 token、其他标签页登录/退出等）
-    const unsub = auth.onAuthStateChange((session) => {
-      applySession(session);
-    });
+const unsub = auth.onAuthStateChange((event, session) => {
+  applySession(session);
+
+  if (event === "PASSWORD_RECOVERY") {
+    window.setTimeout(() => {
+      if (window.location.pathname !== "/reset-password") {
+        window.location.assign("/reset-password");
+      }
+    }, 0);
+  }
+});
     return unsub;
   }, [refresh, applySession]);
 
