@@ -1,4 +1,3 @@
-```ts
 /** 活动领域服务：UI 只依赖这些异步接口 */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -735,4 +734,3 @@ export function templateDefaults(
 ) {
   return CATEGORY_MAP[category];
 }
-```
