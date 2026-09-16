@@ -142,19 +142,36 @@ export async function updatePassword(newPassword: string): Promise<void> {
 }
 
 /** 监听 auth 状态变化 */
-export function onAuthStateChange(callback: (session: AuthSession | null) => void) {
+export function onAuthStateChange(
+  callback: (
+    event: string,
+    session: AuthSession | null,
+  ) => void,
+) {
   const {
     data: { subscription },
-  } = supabase.auth.onAuthStateChange(async (_event, session) => {
+  } = supabase.auth.onAuthStateChange((event, session) => {
     if (!session?.user) {
-      callback(null);
+      callback(event, null);
       return;
     }
-    const profile = await getProfile(session.user.id);
-    callback({
+
+    const mappedSession: AuthSession = {
       user: mapUser(session.user),
-      profile,
+      profile: null,
+    };
+
+    callback(event, mappedSession);
+
+    // 避免在 Supabase auth 回调内部再次发起 Supabase 查询，
+    // 把 profile 查询放到回调外执行。
+    void getProfile(session.user.id).then((profile) => {
+      callback(event, {
+        user: mapUser(session.user),
+        profile,
+      });
     });
   });
+
   return () => subscription.unsubscribe();
 }
