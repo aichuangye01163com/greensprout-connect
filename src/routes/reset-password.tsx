@@ -1,6 +1,10 @@
 ```tsx
 import { useEffect, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+} from "@tanstack/react-router";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/gs/AppShell";
@@ -19,6 +23,7 @@ function ResetPasswordPage() {
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [checking, setChecking] = useState(true);
   const [recoveryReady, setRecoveryReady] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +66,9 @@ function ResetPasswordPage() {
 
   const handleSubmit = async () => {
     if (!recoveryReady) {
-      toast.error("重置链接无效或已失效，请重新获取密码重置邮件");
+      toast.error(
+        "重置链接无效或已失效，请重新获取密码重置邮件",
+      );
       return;
     }
 
@@ -93,7 +100,10 @@ function ResetPasswordPage() {
         to: "/login",
       });
     } catch (error) {
-      console.error("[reset-password] update password error", error);
+      console.error(
+        "[reset-password] update password error",
+        error,
+      );
 
       toast.error(
         error instanceof Error
@@ -124,21 +134,31 @@ function ResetPasswordPage() {
 
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="new-password">新密码</Label>
+            <Label htmlFor="new-password">
+              新密码
+            </Label>
 
             <Input
               id="new-password"
               type="password"
               autoComplete="new-password"
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) =>
+                setPassword(event.target.value)
+              }
               placeholder="至少 6 位"
-              disabled={checking || !recoveryReady || submitting}
+              disabled={
+                checking ||
+                !recoveryReady ||
+                submitting
+              }
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="confirm-password">确认新密码</Label>
+            <Label htmlFor="confirm-password">
+              确认新密码
+            </Label>
 
             <Input
               id="confirm-password"
@@ -149,7 +169,11 @@ function ResetPasswordPage() {
                 setConfirmPassword(event.target.value)
               }
               placeholder="再次输入新密码"
-              disabled={checking || !recoveryReady || submitting}
+              disabled={
+                checking ||
+                !recoveryReady ||
+                submitting
+              }
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   void handleSubmit();
@@ -161,7 +185,11 @@ function ResetPasswordPage() {
           <Button
             type="button"
             className="w-full rounded-xl"
-            disabled={checking || !recoveryReady || submitting}
+            disabled={
+              checking ||
+              !recoveryReady ||
+              submitting
+            }
             onClick={() => void handleSubmit()}
           >
             {checking
