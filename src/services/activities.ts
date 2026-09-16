@@ -14,18 +14,14 @@ import {
   type TimeRangeId,
 } from "@/data/greensprout";
 
-
 export interface ActivityQuery {
   timeRange?: TimeRangeId;
   categories?: CategoryId[];
   keyword?: string;
 }
 
-
 /**
  * 前端分类 -> Supabase activity_categories.slug
- *
- * 这里是前端旧分类体系与数据库大分类体系之间的适配层。
  *
  * 数据库当前分类：
  * sports
@@ -46,7 +42,9 @@ export interface ActivityQuery {
  * boardgame
  * hiking
  */
-const CATEGORY_TO_DB_SLUG: Record<CategoryId, string> = {
+const CATEGORY_TO_DB_SLUG: Partial<
+  Record<CategoryId, string>
+> = {
   run: "sports",
   badminton: "sports",
   coffee: "dining",
@@ -57,16 +55,20 @@ const CATEGORY_TO_DB_SLUG: Record<CategoryId, string> = {
   hiking: "outdoor",
 };
 
-
 /**
  * 获取数据库分类 ID
  */
 async function getCategoryId(
   category: CategoryId
 ): Promise<string> {
-
   const dbSlug =
     CATEGORY_TO_DB_SLUG[category];
+
+  if (!dbSlug) {
+    throw new Error(
+      `不支持的活动分类：${String(category)}`
+    );
+  }
 
   const {
     data,
@@ -92,7 +94,6 @@ async function getCategoryId(
   return data.id;
 }
 
-
 /**
  * 获取活动列表
  *
@@ -102,7 +103,6 @@ async function getCategoryId(
 export async function listActivities(
   query: ActivityQuery = {}
 ): Promise<GSEvent[]> {
-
   const {
     data,
     error,
@@ -135,9 +135,8 @@ export async function listActivities(
   }
 
   const events =
-    (data ?? []).map(
-      (item) =>
-        mapActivityToEvent(item)
+    (data ?? []).map((item) =>
+      mapActivityToEvent(item)
     );
 
   return filterActivities(
@@ -146,7 +145,6 @@ export async function listActivities(
   );
 }
 
-
 /**
  * 前端筛选逻辑
  */
@@ -154,7 +152,6 @@ export function filterActivities(
   events: GSEvent[],
   query: ActivityQuery
 ): GSEvent[] {
-
   const range =
     TIME_RANGES.find(
       (r) =>
@@ -163,9 +160,7 @@ export function filterActivities(
 
   return events
     .filter((e) => {
-
       if (range) {
-
         const d =
           daysFromNow(
             e.startsAt
@@ -189,7 +184,6 @@ export function filterActivities(
       }
 
       if (query.keyword) {
-
         const k =
           query.keyword.toLowerCase();
 
@@ -214,14 +208,12 @@ export function filterActivities(
     );
 }
 
-
 /**
  * 获取单个活动
  */
 export async function getActivity(
   id: string
 ): Promise<GSEvent | null> {
-
   const {
     data,
     error,
@@ -244,7 +236,6 @@ export async function getActivity(
     .single();
 
   if (error) {
-
     if (
       error.code === "PGRST116"
     ) {
@@ -259,7 +250,6 @@ export async function getActivity(
   );
 }
 
-
 /**
  * 已参加活动 ID
  *
@@ -267,9 +257,8 @@ export async function getActivity(
  * active
  * cancelled
  */
-export async function listJoinedIds()
-  : Promise<string[]> {
-
+export async function listJoinedIds():
+  Promise<string[]> {
   const {
     data: {
       user,
@@ -309,14 +298,12 @@ export async function listJoinedIds()
   );
 }
 
-
 /**
  * 加入活动
  */
 export async function joinActivity(
   id: string
 ) {
-
   const {
     data: {
       user,
@@ -358,7 +345,6 @@ export async function joinActivity(
   }
 
   if (existing) {
-
     const {
       error,
     } =
@@ -376,9 +362,7 @@ export async function joinActivity(
     if (error) {
       throw error;
     }
-
   } else {
-
     const {
       error,
     } =
@@ -404,14 +388,12 @@ export async function joinActivity(
   };
 }
 
-
 /**
  * 取消参加
  */
 export async function cancelActivity(
   id: string
 ) {
-
   const {
     data: {
       user,
@@ -457,13 +439,11 @@ export async function cancelActivity(
   };
 }
 
-
 /**
  * 业务规则：
  * 活动开始前 2 小时不能取消
  */
 export const CANCEL_LOCK_HOURS = 2;
-
 
 export function canCancel(
   event: Pick<
@@ -472,7 +452,6 @@ export function canCancel(
   >,
   now = Date.now()
 ) {
-
   if (
     event.status === "ended"
   ) {
@@ -488,12 +467,10 @@ export function canCancel(
       3600000;
 }
 
-
 /**
  * 创建活动
  */
 export interface CreateActivityInput {
-
   title: string;
 
   category: CategoryId;
@@ -541,7 +518,6 @@ export interface CreateActivityInput {
   roomPassword?: string;
 }
 
-
 /**
  * 创建活动
  *
@@ -558,7 +534,6 @@ export interface CreateActivityInput {
 export async function createActivity(
   input: CreateActivityInput
 ): Promise<GSEvent> {
-
   /**
    * 1. 获取当前登录用户
    */
@@ -575,7 +550,6 @@ export async function createActivity(
     );
   }
 
-
   /**
    * 2. 获取数据库分类 ID
    */
@@ -583,7 +557,6 @@ export async function createActivity(
     await getCategoryId(
       input.category
     );
-
 
   /**
    * 3. 提前生成活动 ID
@@ -594,14 +567,12 @@ export async function createActivity(
   const activityId =
     crypto.randomUUID();
 
-
   const inviteToken =
     input.isPrivate
       ? makeInviteToken(
           activityId
         )
       : null;
-
 
   /**
    * 4. 写入 Supabase activities
@@ -620,9 +591,7 @@ export async function createActivity(
     await supabase
       .from("activities")
       .insert({
-
-        id:
-          activityId,
+        id: activityId,
 
         host_id:
           user.id,
@@ -651,6 +620,9 @@ export async function createActivity(
         participant_limit:
           input.limit,
 
+        tags:
+          input.tags ?? [],
+
         fee:
           input.fee,
 
@@ -673,11 +645,12 @@ export async function createActivity(
           input.isPrivate ?? false,
 
         room_password:
-          input.roomPassword ?? null,
+          input.isPrivate
+            ? input.roomPassword ?? null
+            : null,
 
         invite_token:
           inviteToken,
-
       })
       .select(`
         *,
@@ -694,12 +667,10 @@ export async function createActivity(
       `)
       .single();
 
-
   /**
    * 5. 写入失败
    */
   if (error) {
-
     console.error(
       "创建活动失败:",
       error
@@ -707,7 +678,6 @@ export async function createActivity(
 
     throw error;
   }
-
 
   /**
    * 6. 数据库 trigger 会自动：
@@ -722,9 +692,7 @@ export async function createActivity(
   );
 }
 
-
 /* ---------------- 私密活动 ---------------- */
-
 
 export function isPrivateEvent(
   event: Pick<
@@ -735,7 +703,6 @@ export function isPrivateEvent(
   return event.isPrivate === true;
 }
 
-
 export function verifyRoomPassword(
   event: Pick<
     GSEvent,
@@ -744,7 +711,6 @@ export function verifyRoomPassword(
   >,
   input: string
 ) {
-
   if (!event.isPrivate) {
     return true;
   }
@@ -756,7 +722,6 @@ export function verifyRoomPassword(
     input.trim();
 }
 
-
 export function buildInviteLink(
   event: Pick<
     GSEvent,
@@ -764,7 +729,6 @@ export function buildInviteLink(
     "inviteToken"
   >
 ) {
-
   const origin =
     typeof window === "undefined"
       ? ""
@@ -774,7 +738,6 @@ export function buildInviteLink(
     event.inviteToken ?? ""
   )}`;
 }
-
 
 export function templateDefaults(
   category: CategoryId
