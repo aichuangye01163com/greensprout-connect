@@ -23,6 +23,8 @@ export interface ActivityQuery {
 /**
  * 前端分类 -> Supabase activity_categories.slug
  *
+ * 这里是前端旧分类体系与数据库大分类体系之间的适配层。
+ *
  * 数据库当前分类：
  * sports
  * dining
@@ -42,9 +44,7 @@ export interface ActivityQuery {
  * boardgame
  * hiking
  */
-const CATEGORY_TO_DB_SLUG: Partial<
-  Record<CategoryId, string>
-> = {
+const CATEGORY_TO_DB_SLUG: Record<CategoryId, string> = {
   run: "sports",
   badminton: "sports",
   coffee: "dining",
@@ -63,12 +63,6 @@ async function getCategoryId(
 ): Promise<string> {
   const dbSlug =
     CATEGORY_TO_DB_SLUG[category];
-
-  if (!dbSlug) {
-    throw new Error(
-      `不支持的活动分类：${String(category)}`
-    );
-  }
 
   const {
     data,
@@ -135,8 +129,9 @@ export async function listActivities(
   }
 
   const events =
-    (data ?? []).map((item) =>
-      mapActivityToEvent(item)
+    (data ?? []).map(
+      (item) =>
+        mapActivityToEvent(item)
     );
 
   return filterActivities(
@@ -591,7 +586,8 @@ export async function createActivity(
     await supabase
       .from("activities")
       .insert({
-        id: activityId,
+        id:
+          activityId,
 
         host_id:
           user.id,
@@ -620,9 +616,6 @@ export async function createActivity(
         participant_limit:
           input.limit,
 
-        tags:
-          input.tags ?? [],
-
         fee:
           input.fee,
 
@@ -645,9 +638,7 @@ export async function createActivity(
           input.isPrivate ?? false,
 
         room_password:
-          input.isPrivate
-            ? input.roomPassword ?? null
-            : null,
+          input.roomPassword ?? null,
 
         invite_token:
           inviteToken,
