@@ -29,12 +29,17 @@ function mapUser(user: User): AuthUser {
 
 /** 获取当前会话 + profile */
 export async function getSession(): Promise<AuthSession | null> {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
+  const result = await supabase.auth.getSession();
 
-  if (error || !session?.user) return null;
+  if (result.error) {
+    return null;
+  }
+
+  const session = result.data.session;
+
+  if (!session || !session.user) {
+    return null;
+  }
 
   const profile = await getProfile(session.user.id);
 
@@ -45,19 +50,24 @@ export async function getSession(): Promise<AuthSession | null> {
 }
 
 /** 读取 profiles 表 */
-export async function getProfile(userId: string): Promise<Profile | null> {
-  const { data, error } = await supabase
+export async function getProfile(
+  userId: string,
+): Promise<Profile | null> {
+  const result = await supabase
     .from("profiles")
     .select("id, email, nickname, avatar_url, created_at")
     .eq("id", userId)
     .maybeSingle();
 
-  if (error) {
-    console.warn("[auth] getProfile error", error.message);
+  if (result.error) {
+    console.warn(
+      "[auth] getProfile error",
+      result.error.message,
+    );
     return null;
   }
 
-  return data;
+  return result.data;
 }
 
 /** 注册 */
@@ -66,50 +76,81 @@ export async function signUp(params: {
   password: string;
   nickname?: string;
 }): Promise<{ needsEmailConfirmation: boolean }> {
-  const { email, password, nickname } = params;
+  const email = params.email.trim();
+  const password = params.password;
+  const nickname = params.nickname?.trim();
 
-  const emailRedirectTo =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/login`
-      : undefined;
+  let emailRedirectTo: string | undefined;
 
-  const { data, error } = await supabase.auth.signUp({
-    email: email.trim(),
-    password,
-    options: {
-      data: {
-        nickname: nickname?.trim() || email.split("@")[0],
-        avatar_url: "🌱",
-      },
-      ...(emailRedirectTo ? { emailRedirectTo } : {}),
+  if (typeof window !== "undefined") {
+    emailRedirectTo =
+      window.location.origin + "/login";
+  }
+
+  const options: {
+    data: {
+      nickname: string;
+      avatar_url: string;
+    };
+    emailRedirectTo?: string;
+  } = {
+    data: {
+      nickname:
+        nickname ||
+        email.split("@")[0] ||
+        "用户",
+      avatar_url: "🌱",
     },
+  };
+
+  if (emailRedirectTo) {
+    options.emailRedirectTo = emailRedirectTo;
+  }
+
+  const result = await supabase.auth.signUp({
+    email,
+    password,
+    options,
   });
 
-  if (error) throw new Error(error.message);
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 
-  // 客户端兜底：如果触发器未及时写入，手动插入一次
-  if (data.user) {
-    const { error: profileError } = await supabase.from("profiles").upsert(
-      {
-        id: data.user.id,
-        email: data.user.email ?? null,
-        nickname: nickname?.trim() || email.split("@")[0] || null,
-        avatar_url: "🌱",
-      },
-      { onConflict: "id" },
-    );
+  const user = result.data.user;
 
-    if (profileError) {
+  if (user) {
+    const profileResult = await supabase
+      .from("profiles")
+      .upsert(
+        {
+          id: user.id,
+          email: user.email ?? null,
+          nickname:
+            nickname ||
+            email.split("@")[0] ||
+            null,
+          avatar_url: "🌱",
+        },
+        {
+          onConflict: "id",
+        },
+      );
+
+    if (profileResult.error) {
       console.warn(
         "[auth] profile upsert fallback",
-        profileError.message,
+        profileResult.error.message,
       );
     }
   }
 
-  const needsEmailConfirmation = !data.session;
+  const needsEmailConfirmation =
+    !result.data.session;
 
-  return { needsEmailConfirmation };
+  return {
+    needsEmailConfirmation,
+  };
 }
 
 /** 登录 */
@@ -117,91 +158,127 @@ export async function signIn(params: {
   email: string;
   password: string;
 }): Promise<AuthSession> {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email: params.email.trim(),
-    password: params.password,
-  });
+  const result =
+    await supabase.auth.signInWithPassword({
+      email: params.email.trim(),
+      password: params.password,
+    });
 
-  if (error) throw new Error(error.message);
-  if (!data.user) throw new Error("登录失败");
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 
-  const profile = await getProfile(data.user.id);
+  if (!result.data.user) {
+    throw new Error("登录失败");
+  }
+
+  const profile = await getProfile(
+    result.data.user.id,
+  );
 
   return {
-    user: mapUser(data.user),
+    user: mapUser(result.data.user),
     profile,
   };
 }
 
 /** 退出登录 */
 export async function signOut(): Promise<void> {
-  const { error } = await supabase.auth.signOut();
+  const result = await supabase.auth.signOut();
 
-  if (error) throw new Error(error.message);
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 }
 
 /** 忘记密码：发送重置邮件 */
-export async function requestPasswordReset(email: string): Promise<void> {
-  const redirectTo =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/reset-password`
-      : undefined;
+export async function requestPasswordReset(
+  email: string,
+): Promise<void> {
+  let redirectTo: string | undefined;
 
-  const { error } = await supabase.auth.resetPasswordForEmail(
-    email.trim(),
-    redirectTo ? { redirectTo } : {},
-  );
+  if (typeof window !== "undefined") {
+    redirectTo =
+      window.location.origin +
+      "/reset-password";
+  }
 
-  if (error) throw new Error(error.message);
+  let result;
+
+  if (redirectTo) {
+    result =
+      await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo,
+        },
+      );
+  } else {
+    result =
+      await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+      );
+  }
+
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 }
 
 /** 用户点击重置邮件后，更新密码 */
-export async function updatePassword(newPassword: string): Promise<void> {
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword,
-  });
+export async function updatePassword(
+  newPassword: string,
+): Promise<void> {
+  const result =
+    await supabase.auth.updateUser({
+      password: newPassword,
+    });
 
-  if (error) throw new Error(error.message);
+  if (result.error) {
+    throw new Error(result.error.message);
+  }
 }
 
 /**
  * 监听 auth 状态变化
  *
  * 保持项目原有的 callback(session) 接口，
- * 避免影响其他页面。
- *
- * 注意：
- * 不在 Supabase 的 auth 回调内部直接执行异步 profile 查询，
- * 而是在当前调用栈结束后再查询。
+ * 不改变其他页面的调用方式。
  */
 export function onAuthStateChange(
-  callback: (session: AuthSession | null) => void,
+  callback: (
+    session: AuthSession | null,
+  ) => void,
 ) {
-  const {
-    data: { subscription },
-  } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (!session?.user) {
-      callback(null);
-      return;
-    }
+  const result =
+    supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (!session || !session.user) {
+          callback(null);
+          return;
+        }
 
-    // 先立即通知已有 session
-    callback({
-      user: mapUser(session.user),
-      profile: null,
-    });
-
-    // 避免在 Supabase auth callback 内直接进行异步 Supabase 查询
-    setTimeout(() => {
-      void getProfile(session.user.id).then((profile) => {
-        callback({
+        const authSession: AuthSession = {
           user: mapUser(session.user),
-          profile,
-        });
-      });
-    }, 0);
-  });
+          profile: null,
+        };
 
-  return () => subscription.unsubscribe();
+        callback(authSession);
+
+        setTimeout(() => {
+          void getProfile(
+            session.user.id,
+          ).then((profile) => {
+            callback({
+              user: mapUser(session.user),
+              profile,
+            });
+          });
+        }, 0);
+      },
+    );
+
+  return () =>
+    result.data.subscription.unsubscribe();
 }
 ```
