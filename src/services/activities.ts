@@ -625,7 +625,7 @@ export async function createActivity(
           input.agenda,
 
         eligibility:
-          input.eligibility,
+          input.eligibility as unknown as Record<string, never>,
 
         description:
           input.description,
