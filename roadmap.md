@@ -1,11 +1,10 @@
-# 绿芽局 GreenSprout — 原型任务
+# 任务清单
 
-- [x] 设计令牌（MUJI 暖中性色）
-- [x] 配置化数据结构 + 中文 Mock 数据
-- [x] 活动大厅（时间/分类筛选、搜索、活动卡、状态与倒计时）
-- [x] 活动详情与报名（2 小时内不可取消规则弹窗、临时群预览与发言）
-- [x] 发起活动向导（快捷模板 + 自定义）
-- [x] 个人资料与偏好设置（50 兴趣标签、雷区、隐私开关、邮箱模拟验证）
-- [x] 移动优先布局 + 底部 Tab 应用外壳
-- [x] 服务层：src/services/activities.ts、user.ts、chat.ts
-- [x] API 客户端适配层：可配置 baseURL、鉴权头、mock/fetch 传输器
+- [x] 删除 activities.ts 误入的 Markdown 围栏符号（修复解析错误）
+- [x] 创建数据库表：activity_categories / activities / activity_members + 分类数据 + 自动报名触发器
+- [x] 修复 gs-store.tsx 报名/取消时空值类型错误
+- [ ] 等待用户同意后：修复剩余 5 处类型不匹配（mapper 部分字段类型、eligibility 的 Json 转换、活动与发起人资料的关联查询）
+- [ ] 修复后运行类型检查，确认构建通过、可发布
+
+## 规则
+- 任何计划/改动都先告知用户，用户同意后才执行。
