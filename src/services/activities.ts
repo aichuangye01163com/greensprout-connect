@@ -384,9 +384,9 @@ export async function createActivity(
 
       deposit: input.deposit,
 
-      agenda: input.agenda,
+      agenda: input.agenda as unknown as never,
 
-      eligibility: input.eligibility,
+      eligibility: input.eligibility as unknown as never,
       description: input.description,
 
       is_private: input.isPrivate ?? false,

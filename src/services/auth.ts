@@ -142,16 +142,18 @@ export async function updatePassword(newPassword: string): Promise<void> {
 }
 
 /** 监听 auth 状态变化 */
-export function onAuthStateChange(callback: (session: AuthSession | null) => void) {
+export function onAuthStateChange(
+  callback: (event: string, session: AuthSession | null) => void
+) {
   const {
     data: { subscription },
-  } = supabase.auth.onAuthStateChange(async (_event, session) => {
+  } = supabase.auth.onAuthStateChange(async (event, session) => {
     if (!session?.user) {
-      callback(null);
+      callback(event, null);
       return;
     }
     const profile = await getProfile(session.user.id);
-    callback({
+    callback(event, {
       user: mapUser(session.user),
       profile,
     });
