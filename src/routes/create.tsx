@@ -1,4 +1,3 @@
-```tsx
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/gs/AppShell";
@@ -851,4 +850,3 @@ function Field({
 }
 ```
 
-**这个版本就是 `9a9f0aa` 的 `create.tsx`，804 行完整内容。**
