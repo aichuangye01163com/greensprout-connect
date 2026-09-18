@@ -318,8 +318,7 @@ export async function cancelActivity(
     event:
       await getActivity(id),
   };
-};
- /**
+}; /**
   * 业务规则：
   * 活动开始前2小时不能取消
   */
