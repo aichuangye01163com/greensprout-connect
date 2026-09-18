@@ -180,7 +180,7 @@ export async function joinActivity(id: string) {
     .insert({
       activity_id: id,
       user_id: user.id,
-      status: "joined",
+      status: "active",
     });
 
   if (error) {
