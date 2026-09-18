@@ -105,8 +105,20 @@ function EventDetail() {
     window.setTimeout(() => chatRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
   };
 
-  const doJoin = async () => {
-    await join(event.id);
+const doJoin = async () => {
+  console.log("🔥 doJoin clicked", event.id);
+
+  await join(event.id);
+
+  console.log("🔥 join finished");
+
+  setConfirmJoin(false);
+  setAskPassword(false);
+  setPassword("");
+  setPwError("");
+  toast.success(isPrivate ? "密码正确，已进入活动室临时群" : "报名成功，临时群已解锁");
+  enterChat();
+};
     setConfirmJoin(false);
     setAskPassword(false);
     setPassword("");
