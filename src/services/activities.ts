@@ -180,6 +180,10 @@ export async function listJoinedIds(): Promise<string[]> {
 
 /**
  * 加入活动
+ *
+ * 新业务逻辑：
+ * 用户报名 = pending
+ * 等待发起者审核
  */
 export async function joinActivity(id: string) {
   console.log("🔥 joinActivity called", id);
