@@ -167,6 +167,7 @@ export async function listJoinedIds(): Promise<string[]> {
  * 加入活动
  */
 export async function joinActivity(id: string) {
+  console.log("🔥 joinActivity called", id);
   const {
     data: { user },
   } = await supabase.auth.getUser();
