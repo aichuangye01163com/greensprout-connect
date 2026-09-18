@@ -119,13 +119,6 @@ const doJoin = async () => {
   toast.success(isPrivate ? "密码正确，已进入活动室临时群" : "报名成功，临时群已解锁");
   enterChat();
 };
-    setConfirmJoin(false);
-    setAskPassword(false);
-    setPassword("");
-    setPwError("");
-    toast.success(isPrivate ? "密码正确，已进入活动室临时群" : "报名成功，临时群已解锁");
-    enterChat();
-  };
 
   const startJoin = () => {
     // 私密活动且通过邀请链接进入的新用户需要提示注册
