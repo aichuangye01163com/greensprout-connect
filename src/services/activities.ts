@@ -197,17 +197,60 @@ export async function joinActivity(id: string) {
   }
 
 
-  const { error } = await supabase
-    .from("activity_members")
-    .insert({
-      activity_id: id,
-      user_id: user.id,
-      status: "pending",
-    });
+  // 1. 查询已有报名记录
+  const { data: existing } =
+    await supabase
+      .from("activity_members")
+      .select("*")
+      .eq("activity_id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
 
-  if (error) {
-    throw error;
+  if (existing) {
+
+    if (existing.status === "approved") {
+      throw new Error("你已经报名成功");
+    }
+
+
+    if (existing.status === "pending") {
+      throw new Error("报名申请已提交，请等待发起者审核");
+    }
+
+
+    // cancelled 可以重新报名
+    const { error } =
+      await supabase
+        .from("activity_members")
+        .update({
+          status:"pending",
+          cancelled_at:null,
+        })
+        .eq("id", existing.id);
+
+
+    if (error) {
+      throw error;
+    }
+
+  } else {
+
+
+    // 新报名
+    const { error } =
+      await supabase
+        .from("activity_members")
+        .insert({
+          activity_id:id,
+          user_id:user.id,
+          status:"pending",
+        });
+
+
+    if(error){
+      throw error;
+    }
   }
 
 
@@ -216,80 +259,7 @@ export async function joinActivity(id: string) {
     event: await getActivity(id),
   };
 }
-
-  } 
-  // 新报名
-  else {
-
-    const { error } =
-      await supabase
-        .from("activity_members")
-        .insert({
-          activity_id: id,
-          user_id: user.id,
-          status: ""pending",
-        });
-
-    if (error) {
-      throw error;
-    }
-
-  }
-
-
-  return {
-    joinedIds:
-      await listJoinedIds(),
-
-    event:
-      await getActivity(id),
-  };
-}
-
-
 /**
- * 取消参加
- */
-export async function cancelActivity(
-  id: string
-) {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-
-  if (!user) {
-    throw new Error(
-      "请先登录"
-    );
-  }
-
-
-  const { error } =
-    await supabase
-      .from("activity_members")
-      .update({
-        status: "cancelled",
-        cancelled_at:
-          new Date().toISOString(),
-      })
-      .eq("activity_id", id)
-      .eq("user_id", user.id);
-
-
-  if (error) {
-    throw error;
-  }
-
-
-  return {
-    joinedIds:
-      await listJoinedIds(),
-
-    event:
-      await getActivity(id),
-  };
-}; /**
   * 业务规则：
   * 活动开始前2小时不能取消
   */
