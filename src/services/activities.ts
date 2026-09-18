@@ -162,12 +162,11 @@ export async function listJoinedIds(): Promise<string[]> {
     return [];
   }
 
-  const { data, error } =
-    await supabase
-      .from("activity_members")
-      .select("activity_id")
-      .eq("user_id", user.id)
-      .eq("status", "active");
+  const { data, error } = await supabase
+    .from("activity_members")
+    .select("activity_id")
+    .eq("user_id", user.id)
+    .eq("status", "approved");
 
   if (error) {
     throw error;
@@ -182,69 +181,37 @@ export async function listJoinedIds(): Promise<string[]> {
 /**
  * 加入活动
  */
-export async function joinActivity(
-  id: string
-) {
-  console.log(
-    "🔥 joinActivity called",
-    id
-  );
+export async function joinActivity(id: string) {
+  console.log("🔥 joinActivity called", id);
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    throw new Error(
-      "请先登录"
-    );
+    throw new Error("请先登录");
   }
 
 
-  // 先检查是否已有报名记录
-  const { data: existing, error: findError } =
-    await supabase
-      .from("activity_members")
-      .select("*")
-      .eq("activity_id", id)
-      .eq("user_id", user.id)
-      .maybeSingle();
+  const { error } = await supabase
+    .from("activity_members")
+    .insert({
+      activity_id: id,
+      user_id: user.id,
+      status: "pending",
+    });
 
 
-  if (findError) {
-    throw findError;
+  if (error) {
+    throw error;
   }
 
 
-  // 已存在记录
-  if (existing) {
-
-    // 已取消，恢复报名
-    if (existing.status === "cancelled") {
-
-      const { error } =
-        await supabase
-          .from("activity_members")
-          .update({
-            status: "active",
-            cancelled_at: null,
-          })
-          .eq("id", existing.id);
-
-      if (error) {
-        throw error;
-      }
-
-    } 
-    // 已报名，不重复插入
-    else {
-      return {
-        joinedIds:
-          await listJoinedIds(),
-        event:
-          await getActivity(id),
-      };
-    }
+  return {
+    joinedIds: await listJoinedIds(),
+    event: await getActivity(id),
+  };
+}
 
   } 
   // 新报名
