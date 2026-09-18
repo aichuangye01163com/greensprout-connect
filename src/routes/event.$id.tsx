@@ -422,7 +422,12 @@ const doJoin = async () => {
             <Button variant="ghost" onClick={() => setAskRegister(false)}>
               返回
             </Button>
-            <Button onClick={() => window.location.href = "/profile"}>
+           <Button
+ onClick={()=>{
+   console.log("按钮真的被点击");
+   void doJoin();
+ }}
+>
               前往注册
             </Button>
           </DialogFooter>
