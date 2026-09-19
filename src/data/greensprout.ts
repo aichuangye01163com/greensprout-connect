@@ -1,3 +1,4 @@
+```ts
 import coverRun from "@/assets/cover-run.jpg";
 import coverCoffee from "@/assets/cover-coffee.jpg";
 import coverBadminton from "@/assets/cover-badminton.jpg";
@@ -174,6 +175,17 @@ export interface Host {
 
 export interface GSEvent {
   id: string;
+
+  /**
+   * 活动发起人的 Supabase Auth / profiles 唯一 ID。
+   *
+   * Supabase 活动数据：
+   * activities.host_id → activity-mapper → GSEvent.hostId
+   *
+   * 使用可选字段是为了兼容当前仍保留的 Mock EVENTS。
+   */
+  hostId?: string;
+
   title: string;
   category: CategoryId;
   cover: string;
@@ -218,7 +230,12 @@ function baseDay() {
 }
 
 function at(dayOffset: number, hour: number, minute = 0) {
-  return new Date(baseDay() + dayOffset * DAY + hour * 3600000 + minute * 60000).toISOString();
+  return new Date(
+    baseDay() +
+      dayOffset * DAY +
+      hour * 3600000 +
+      minute * 60000,
+  ).toISOString();
 }
 
 export function fmtDate(iso: string) {
@@ -510,7 +527,12 @@ export const EVENTS: GSEvent[] = [
     deposit: 0,
     host: hosts.lin,
     agenda: mkAgenda(["集合租车", "环湖骑行", "草坪野餐"], 9),
-    eligibility: { ageRange: [18, 45], gender: "不限", education: "不限", income: "不限" },
+    eligibility: {
+      ageRange: [18, 45],
+      gender: "不限",
+      education: "不限",
+      income: "不限",
+    },
     description: "本场已顺利结束，临时群将在活动结束 12 小时后自动解散。",
     status: "ended",
     attendees: [
@@ -535,7 +557,12 @@ export const EVENTS: GSEvent[] = [
     deposit: 0,
     host: hosts.zhou,
     agenda: mkAgenda(["规则讲解", "阿瓦隆三局", "自由局"], 19),
-    eligibility: { ageRange: [20, 35], gender: "不限", education: "不限", income: "不限" },
+    eligibility: {
+      ageRange: [20, 35],
+      gender: "不限",
+      education: "不限",
+      income: "不限",
+    },
     description: "包厢费 AA，大约每人 40。新手我会单独讲一遍规则。",
     status: "open",
     attendees: [
@@ -612,3 +639,4 @@ export const DEFAULT_PROFILE = {
 };
 
 export const AVATAR_CHOICES = ["🌱", "🍃", "☁️", "🌾", "🎐", "🌼", "🫧", "🌙", "🍋", "🪵"];
+```
