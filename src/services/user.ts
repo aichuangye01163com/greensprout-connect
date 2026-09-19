@@ -1,4 +1,3 @@
-```ts
 /** 用户领域服务 —— Supabase 版本 */
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_PROFILE } from "@/data/greensprout";
@@ -670,4 +669,4 @@ export function logout() {
     );
   }
 }
-```
+
