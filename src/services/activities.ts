@@ -150,7 +150,8 @@ export async function getActivity(
  * 已参加活动 ID
  *
  * 数据库状态统一：
- * active = 已报名
+ * approved = 已报名成功
+ * pending = 等待发起者审核
  * cancelled = 已取消
  */
 export async function listJoinedIds(): Promise<string[]> {
@@ -224,8 +225,8 @@ export async function joinActivity(id: string) {
       await supabase
         .from("activity_members")
         .update({
-          status:"pending",
-          cancelled_at:null,
+          status: "pending",
+          cancelled_at: null,
         })
         .eq("id", existing.id);
 
@@ -242,13 +243,13 @@ export async function joinActivity(id: string) {
       await supabase
         .from("activity_members")
         .insert({
-          activity_id:id,
-          user_id:user.id,
-          status:"pending",
+          activity_id: id,
+          user_id: user.id,
+          status: "pending",
         });
 
 
-    if(error){
+    if (error) {
       throw error;
     }
   }
@@ -259,10 +260,107 @@ export async function joinActivity(id: string) {
     event: await getActivity(id),
   };
 }
+
+
 /**
-  * 业务规则：
-  * 活动开始前2小时不能取消
-  */
+ * 待审核报名者
+ *
+ * 只读取指定活动中 status = pending 的报名记录。
+ *
+ * 注意：
+ * 这里不自行判断当前用户是不是发起者。
+ * 真正的数据访问权限由 Supabase RLS 控制。
+ */
+export interface PendingActivityMember {
+  id: string;
+  activityId: string;
+  userId: string;
+  status: "pending";
+  profile: {
+    id: string;
+    nickname: string;
+    avatarUrl: string | null;
+  } | null;
+}
+
+export async function getPendingMembers(
+  activityId: string
+): Promise<PendingActivityMember[]> {
+  const { data, error } = await supabase
+    .from("activity_members")
+    .select(`
+      id,
+      activity_id,
+      user_id,
+      status,
+      profiles (
+        id,
+        nickname,
+        avatar_url
+      )
+    `)
+    .eq("activity_id", activityId)
+    .eq("status", "pending")
+    .order("id", {
+      ascending: true,
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map((item) => ({
+    id: item.id,
+    activityId: item.activity_id,
+    userId: item.user_id,
+    status: "pending",
+    profile: item.profiles
+      ? {
+          id: item.profiles.id,
+          nickname: item.profiles.nickname,
+          avatarUrl: item.profiles.avatar_url,
+        }
+      : null,
+  }));
+}
+
+
+/**
+ * 审核通过报名
+ *
+ * pending → approved
+ *
+ * 数据库 RLS 会再次验证：
+ * 当前用户必须是该活动发起者或 admin。
+ *
+ * approved 后：
+ * activity_members trigger
+ *      ↓
+ * sync_activity_member_to_chat()
+ *      ↓
+ * chat_members.status = active
+ */
+export async function approveMember(
+  memberId: string
+): Promise<void> {
+  const { error } = await supabase
+    .from("activity_members")
+    .update({
+      status: "approved",
+    })
+    .eq("id", memberId)
+    .eq("status", "pending");
+
+  if (error) {
+    throw error;
+  }
+}
+
+
+/**
+ * 业务规则：
+ * 活动开始前2小时不能取消
+ */
 export const CANCEL_LOCK_HOURS = 2;
 
 export function canCancel(
@@ -390,7 +488,7 @@ export async function createActivity(
 
   const {
     data: categoryRow,
-    error: categoryError,
+    error: categoryError
   } =
     await supabase
       .from("activity_categories")
@@ -466,14 +564,11 @@ export async function createActivity(
         description:
           input.description,
 
-
         is_private:
           input.isPrivate ?? false,
 
-
         room_password:
           input.roomPassword ?? null,
-
 
         invite_token:
           input.isPrivate
@@ -481,7 +576,6 @@ export async function createActivity(
                 crypto.randomUUID()
               )
             : null,
-
 
         status:
           "published",
@@ -514,7 +608,6 @@ export async function createActivity(
 }
 
 
-
 /**
  * 私密活动
  */
@@ -523,7 +616,6 @@ export function isPrivateEvent(
 ) {
   return event.isPrivate === true;
 }
-
 
 
 /**
@@ -548,7 +640,6 @@ export function verifyRoomPassword(
     input.trim()
   );
 }
-
 
 
 /**
