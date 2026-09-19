@@ -638,4 +638,3 @@ export const DEFAULT_PROFILE = {
 };
 
 export const AVATAR_CHOICES = ["🌱", "🍃", "☁️", "🌾", "🎐", "🌼", "🫧", "🌙", "🍋", "🪵"];
-```
