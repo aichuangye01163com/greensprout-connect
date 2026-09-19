@@ -1,4 +1,3 @@
-```ts
 import coverRun from "@/assets/cover-run.jpg";
 import coverCoffee from "@/assets/cover-coffee.jpg";
 import coverBadminton from "@/assets/cover-badminton.jpg";
