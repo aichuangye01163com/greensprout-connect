@@ -1,9 +1,20 @@
+```ts
 /** 用户领域服务 —— Supabase 版本 */
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_PROFILE } from "@/data/greensprout";
 import * as auth from "./auth";
 
-export type UserProfile = typeof DEFAULT_PROFILE;
+/**
+ * UserProfile 现在保留 Supabase Auth / profiles 的唯一用户 ID。
+ *
+ * profiles.id = auth.users.id
+ *
+ * 这个 id 后续用于判断：
+ * 当前用户是否为某个活动的 host_id。
+ */
+export type UserProfile = typeof DEFAULT_PROFILE & {
+  id: string;
+};
 
 export interface RegisterInput {
   nickname: string;
@@ -55,7 +66,7 @@ export interface UpsertArchiveFieldDefinitionInput
 }
 
 function mapProfile(profile: {
-  id?: string;
+  id: string;
   email?: string | null;
   nickname?: string | null;
   avatar_url?: string | null;
@@ -78,6 +89,10 @@ function mapProfile(profile: {
 }): UserProfile {
   return {
     ...DEFAULT_PROFILE,
+
+    // Supabase Auth / profiles 的唯一用户 ID
+    id: profile.id,
+
     nickname: profile.nickname ?? DEFAULT_PROFILE.nickname,
     email: profile.email ?? DEFAULT_PROFILE.email,
     avatar: profile.avatar_url ?? DEFAULT_PROFILE.avatar,
@@ -655,3 +670,4 @@ export function logout() {
     );
   }
 }
+```
